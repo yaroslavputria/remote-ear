@@ -13,10 +13,10 @@
 | [R4](#r4) | LE Audio engages the earbud microphone / degrades media | Medium | High | [H2](feasibility.md), Scenario A |
 | [R5](#r5) | Clock drift degrades audio over hours | High | Medium | Scenario G |
 | [R6](#r6) | Earbud latency worse than the 400 ms budget | Medium | Medium | [H3](feasibility.md), Scenario A |
-| [R7](#r7) | Microphone preempted by another app | Medium | Medium | Scenario F |
+| [R7](#r7) | Microphone preempted by another app — **fails as silence, not an error** | Medium | Medium | Scenario F |
 | [R8](#r8) | Battery drain too high for overnight use | Low | Medium | Scenario G |
 | [R9](#r9) | Doze or wakelock stalls the pipeline | Low | Medium | Scenario C, forced idle |
-| [R10](#r10) | Platform FGS rules have changed under `targetSdk 36` | Low | Medium | Phase 1 |
+| [R10](#r10) | ~~Platform FGS rules have changed under `targetSdk 36`~~ | — | — | **Closed** — verified 2026-09-09 |
 | [R11](#r11) | Sleep-sound feature not achievable as specified | Medium | Low (MVP) | Post-MVP spike |
 
 ---
@@ -107,13 +107,24 @@ terms, not the large one.
 
 ## R7 — Microphone preempted {#r7}
 
-**Medium probability, medium impact.** Since Android 10 the microphone has a single owner; an
-assistant, a call, or a camera can take it. The app receives silence or a read error, not a tidy
-callback.
+**Medium probability, medium impact.** *(verified)* Since Android 10 a concurrent-capture policy
+means **two ordinary apps can never capture at the same time**; an assistant, a call, or another
+recorder takes the microphone. And `AudioSource.MIC` is not a *privacy-sensitive* source, so
+RemoteEar structurally loses to any app using `VOICE_COMMUNICATION` — regardless of which app is
+visible or started first. That ceiling is a consequence of
+[ADR-0004](adr/0004-media-path-only.md) and cannot be raised without breaking the product.
 
-**Mitigation.** Treat read errors and sustained exactly-zero-frame runs as preemption, retry with
-backoff, and surface `Paused(MicPreempted)` rather than pretending to monitor (S6). The general rule
-applies: never present silence as monitoring.
+**The failure shape is what makes this dangerous: the app receives silence, not an error.** No
+exception, no failed call — just buffers of zeros. In a monitor, silence is indistinguishable from a
+quiet room, which is exactly the "believing you are listening when you are not" failure that ranks
+R1 first.
+
+**Mitigation.** Detect it with the platform API, not a heuristic:
+`AudioRecord.registerAudioRecordingCallback()` — registered *before* capture starts — reports
+`AudioRecordingConfiguration.isClientSilenced()` (API 29, our `minSdk` floor). The same mechanism
+catches the user flipping the system microphone privacy toggle. Read errors and sustained
+zero-frame runs stay as backstops. Then retry with backoff and surface `Paused(MicPreempted)` (S6).
+Never present silence as monitoring.
 
 ## R8 — Battery drain {#r8}
 
@@ -134,14 +145,15 @@ keep the pipeline alive; screen-off is not Doze. But "should" is doing work in t
 natural Doze. If stalls appear, add a `PARTIAL_WAKE_LOCK` — and record an ADR, because it is a new
 permission and therefore a decision, not a tweak.
 
-## R10 — Platform rules have changed {#r10}
+## R10 — Platform rules have changed {#r10} — **closed**
 
-**Low probability, medium impact.** The foreground-service documentation in
-[android-constraints.md](android-constraints.md) was written from knowledge with a cutoff, and this
-area of the platform moves quickly — service-type timeouts and background-start rules have both
-changed in recent releases.
+**Retired 2026-09-09.** Phase 1 verified the foreground-service, microphone, and audio-focus rules
+against current platform documentation for `targetSdk 36`. It paid for itself: it found a second,
+stricter background-start restriction layer, the silence-not-error capture behaviour (R7), and the
+Android 15 audio-focus ordering requirement — none of which were in the original desk research.
 
-**Mitigation.** Phase 1 exists solely to eliminate this, before any service code is written.
+Findings and sources are in [android-constraints.md](android-constraints.md). **Re-open this risk
+when raising `targetSdk` beyond 36**; it is a recurring obligation, not a one-time task.
 
 ## R11 — Sleep-sound feature not achievable {#r11}
 

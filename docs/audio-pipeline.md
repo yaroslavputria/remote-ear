@@ -191,7 +191,7 @@ build them in Phase 6 rather than retrofitting them under a failing long-run tes
 | `BluetoothGone` | `AudioDeviceCallback.onAudioDevicesRemoved` removes the last usable sink | Automatic on reconnect — possible **only because the service stays alive**, see [ADR-0005](adr/0005-foreground-service-hosts-monitoring.md) |
 | `AudioFocusLost` | `AUDIOFOCUS_LOSS_TRANSIENT` | Automatic on `AUDIOFOCUS_GAIN` |
 | `Call` | Focus loss during telephony, or `AudioManager.mode` reports a call | Automatic when the call ends |
-| `MicPreempted` | `read()` error, or a sustained run of exactly-zero frames | Retry with backoff; surface after repeated failure |
+| `MicPreempted` | **`AudioRecordingConfiguration.isClientSilenced()`** via a recording callback registered *before* capture starts. `read()` errors and sustained zero-frame runs are backstops | Retry with backoff; surface after repeated failure |
 | `Error` | Anything else, including a wrong `routedDevice` | Manual — show what was observed |
 
 The important property: **`Paused` is a first-class state with a stated reason, not a silent stop.**
@@ -203,15 +203,26 @@ Brief §16 asks for exactly this.
 Request focus once, when monitoring starts:
 
 - `AudioFocusRequest.Builder(AUDIOFOCUS_GAIN)` with the same `AudioAttributes` as the track.
+- **Request it from inside the running foreground service, after `startForeground()` succeeds.**
+  Apps targeting Android 15+ must be the top app *or* be running a foreground service to obtain
+  focus at all; otherwise the call just returns `AUDIOFOCUS_REQUEST_FAILED`. Requesting speculatively
+  from the Activity is an ordering bug that will look like a mysterious silent failure.
 - `setWillPauseWhenDucked(true)` — **pause rather than duck.** A ducked baby monitor is a
   particularly bad object: quiet enough to be useless, loud enough to seem fine.
 - On `AUDIOFOCUS_LOSS`: stop and require an explicit restart. On `AUDIOFOCUS_LOSS_TRANSIENT`: enter
   `Paused(AudioFocusLost)` and resume on `AUDIOFOCUS_GAIN`.
+- Resuming from `Paused` re-requests focus safely, because the service is still running and therefore
+  still qualifies.
 
-**Phone and VoIP calls resolve themselves.** Android silences the microphone for ordinary apps
-during telephony, so continuing to run would produce silence while claiming to monitor. Pausing is
-both the correct behaviour and the honest one — brief §16 reaches the same conclusion. The app must
-never attempt to keep capturing through a call, and must never touch call audio.
+**Phone and VoIP calls take the microphone away from us, by documented rule.** *(verified)*
+Privileged apps outrank ordinary ones, and privacy-sensitive sources (`VOICE_COMMUNICATION`,
+`CAMCORDER`) outrank non-privacy-sensitive ones like our `MIC` — so a cellular call wins as a
+privileged client, and a VoIP call wins on source priority. Either way we are **silenced, not
+errored**: continuing to run would relay zeros while reporting "Monitoring".
+
+Pausing is therefore both the correct behaviour and the honest one — brief §16 reaches the same
+conclusion. The app must never attempt to keep capturing through a call, and must never touch call
+audio.
 
 ## Volume and gain
 

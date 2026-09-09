@@ -28,12 +28,29 @@ skills so later sessions stay inside these decisions.
 ## Phase 1 — Verify the platform documentation
 
 Small, boring, and load-bearing. Re-check the foreground-service and microphone rules against the
-current `developer.android.com` for `targetSdk 36`, per the open verification task at the top of
-[android-constraints.md](android-constraints.md). Amend that document with what is actually true
-today.
+current `developer.android.com` for `targetSdk 36`, and amend
+[android-constraints.md](android-constraints.md) with what is actually true today.
 
 **Gate:** [android-constraints.md](android-constraints.md) carries no unverified platform claims,
-and the four questions in its verification task are answered in writing.
+and the four questions in its verification task are answered in writing. ✅ *(2026-09-09)*
+
+It paid for itself. Three things were not in the original desk research:
+
+1. **A second, stricter background-start layer.** `RECORD_AUDIO` is a *while-in-use* permission, so
+   starting a `microphone` service from the background raises a `SecurityException` (Android 14+),
+   with a much shorter exemption list than the general ban. It applies **only to starting** a
+   service, not to one already running — which strengthens
+   [ADR-0005](adr/0005-foreground-service-hosts-monitoring.md) rather than undermining it.
+2. **Losing the microphone delivers silence, not an error**, and there is a platform API for
+   detecting it — `isClientSilenced()`, available at API 29. This replaced a zero-frame heuristic in
+   the design. It also revealed that `AudioSource.MIC` is not *privacy-sensitive*, so we
+   structurally lose the microphone to any VoIP app ([risk R7](risks.md)).
+3. **Audio focus requires the foreground service** when targeting Android 15+ — an ordering
+   constraint: request focus after `startForeground()`, never from the Activity.
+
+Confirmed as expected: `FOREGROUND_SERVICE_MICROPHONE` is correct; the `microphone` type has **no**
+timeout, so multi-hour sessions are permitted; Android 16 changes nothing in this area.
+[Risk R10](risks.md) is closed, to be reopened when `targetSdk` next rises.
 
 *Why first: it is cheap, and it is the one thing in the plan that could invalidate the service
 design before a line of it is written.*
@@ -159,9 +176,9 @@ they are.
 ## Sequence at a glance
 
 ```text
- 0  docs ............................ committed
- 1  verify platform docs ............ no unverified claims        [cheap, do first]
- 2  throwaway prototype ............. HEAR THE ROOM               [GO / NO-GO]
+ 0  docs ............................ committed                   [done]
+ 1  verify platform docs ............ no unverified claims        [done]
+ 2  throwaway prototype ............. HEAR THE ROOM               [GO / NO-GO]  <-- next
  3  foreground service .............. scenarios C, D
  4  Compose UI ...................... all states reachable
  5  robustness ...................... scenarios E, F

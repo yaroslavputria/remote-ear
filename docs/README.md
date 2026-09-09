@@ -38,10 +38,23 @@ rest of the design hangs from.
 
 ## Current state
 
-Phase 0 complete. **Next: Phase 1** — re-verify the foreground-service rules against current
-platform documentation, then **Phase 2**, the throwaway prototype whose only job is to answer:
+Phases 0 and 1 complete. The platform rules are verified against current documentation as of
+2026-09-09 ([android-constraints.md](android-constraints.md) carries the findings and sources), and
+[risk R10](risks.md) is closed.
+
+Phase 1 changed three things rather than merely confirming them: a stricter *while-in-use*
+background-start restriction (which strengthens
+[ADR-0005](adr/0005-foreground-service-hosts-monitoring.md)); the discovery that losing the
+microphone delivers **silence, not an error**, which promoted silencing detection to a must-have
+(M15) and replaced a heuristic with `isClientSilenced()`; and an audio-focus ordering constraint on
+Android 15+.
+
+**Next: Phase 2** — the throwaway prototype whose only job is to answer:
 
 > Can I put the phone in another room and reliably hear its microphone through my Bluetooth earbud?
+
+It needs physical hardware: an Android phone, real Bluetooth headphones, and `adb` (currently not on
+PATH on this machine — the `android-cli` skill covers installing the tooling).
 
 ## Conventions
 

@@ -209,11 +209,19 @@ itself from the background and auto-resume becomes impossible. Hence
 [ADR-0005](adr/0005-foreground-service-hosts-monitoring.md): the service outlives the audio streams
 and owns a `Paused` state.
 
-> **Open verification task.** These rules reflect the platform through Android 14/15. Android has
-> introduced foreground-service *timeouts* for certain service types and further background-start
-> restrictions in recent releases. Before any Phase 2 code is written, re-check the current
-> `developer.android.com` documentation for the `microphone` type against `targetSdk 36`. Tracked as
-> Phase 1 of the [implementation plan](implementation-plan.md).
+> **Verified 2026-09-09** against current platform documentation (Phase 1 of the
+> [implementation plan](implementation-plan.md)). `FOREGROUND_SERVICE_MICROPHONE` is still correct;
+> the `microphone` type is **not** subject to any foreground-service timeout, so multi-hour sessions
+> are permitted; and Android 16 adds no changes in this area. Two findings went beyond confirmation
+> and are recorded in [android-constraints.md](android-constraints.md):
+>
+> - **A second, stricter restriction layer.** `RECORD_AUDIO` is a *while-in-use* permission, so
+>   starting a `microphone` service from the background raises a **`SecurityException`** (Android
+>   14+) with a much shorter exemption list than the general ban — but **only when *starting* a
+>   service, not for one already running.** This strengthens rather than undermines
+>   [ADR-0005](adr/0005-foreground-service-hosts-monitoring.md).
+> - **Audio focus needs the service.** Targeting Android 15+, focus can only be obtained while top
+>   app or running a foreground service — an ordering constraint, not an obstacle.
 
 ## Q7. Which Android versions support the required APIs?
 
@@ -247,11 +255,24 @@ Ranked by how much damage they do to *this particular* product:
    and consider a heartbeat that makes a death visible.
 2. **Input processing gating quiet sound.** Discussed in Q2. Some OEMs apply heavy AGC and noise
    suppression to `MIC`. A gate that suppresses room noise is fatal to the product's value.
-3. **Single-microphone-holder preemption.** Since Android 10 the microphone is not shared freely: a
-   higher-priority client (an assistant, a call, the camera on some devices) can take it. The app
-   receives silence or a read error rather than a tidy callback. `AudioRecord.read()` returning
-   `ERROR_DEAD_OBJECT` or `ERROR_INVALID_OPERATION`, or a sustained run of exactly-zero frames, must
-   be treated as "the microphone was taken" and surfaced honestly.
+3. **Single-microphone-holder preemption — and it fails as *silence*, not as an error.** *(verified)*
+   Since Android 10 a concurrent-capture policy decides who gets audio, and **two ordinary apps can
+   never capture at the same time**. The loser keeps receiving buffers full of zeros: no exception,
+   no failed call. For a monitor this is the most dangerous failure shape there is, because a quiet
+   room also sounds like nothing.
+
+   Detect it with the platform API rather than a heuristic:
+   `AudioRecord.registerAudioRecordingCallback()` (registered *before* capture starts) reports
+   `AudioRecordingConfiguration.isClientSilenced()`. Available from API 29 — exactly our `minSdk`
+   floor. The same mechanism catches the user flipping the system microphone privacy toggle.
+
+   Note the ceiling this imposes: only `CAMCORDER` and `VOICE_COMMUNICATION` count as
+   *privacy-sensitive* sources, and those outrank everything else "even if [the other app] has a UI
+   on top or started capturing more recently". **`AudioSource.MIC` is not privacy-sensitive, so
+   RemoteEar structurally loses the microphone to any VoIP app** — a real cost of
+   [ADR-0004](adr/0004-media-path-only.md), and one that happens to coincide with wanting to pause
+   during calls anyway. Our foreground service does buy foreground-equivalent priority against other
+   *ordinary* apps, which is the common case.
 4. **LE Audio divergence.** See Q3.
 5. **A2DP absolute-volume quirks.** Some earbuds map the phone's volume scale coarsely or ignore it,
    so `setVolume()` may feel steppy or have little effect at the low end.
@@ -293,7 +314,7 @@ gate Phase 2:
 | H5 | Does the service survive hours with the screen locked, on each OEM? | Scenarios C and G |
 | H6 | Actual battery drain per hour | Scenario G with `batterystats` |
 | H7 | How much clock drift accumulates, and in which direction? | Scenario G with underrun and lag counters |
-| H8 | What does the pipeline observe when a call or an assistant takes the microphone? | Scenario F |
+| H8 | Does `isClientSilenced()` actually fire when a call or assistant takes the microphone, and how fast? *(mechanism now verified — only the timing and reliability remain)* | Scenario F, cellular **and** VoIP |
 
 **The emulator cannot answer any of these** — it has no Bluetooth audio. All of it is
 physical-device work.

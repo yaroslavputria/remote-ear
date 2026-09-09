@@ -155,13 +155,45 @@ no boxing, no capturing lambdas. A GC pause is an audible click.
 Request `AUDIOFOCUS_GAIN` once at start, with `setWillPauseWhenDucked(true)` — **pause rather than
 duck**. A ducked baby monitor is quiet enough to be useless and loud enough to seem fine.
 
+**Request focus from inside the running foreground service, after `startForeground()` succeeds.**
+Targeting Android 15+, an app must be top app *or* running a foreground service to obtain focus at
+all; otherwise the call just returns `AUDIOFOCUS_REQUEST_FAILED`. Requesting speculatively from the
+Activity is an ordering bug that presents as an unexplained silent failure.
+
 | Event | Response |
 |---|---|
 | `AUDIOFOCUS_LOSS_TRANSIENT` | `Paused(AudioFocusLost)`, resume on `AUDIOFOCUS_GAIN` |
 | `AUDIOFOCUS_LOSS` | Stop; require an explicit restart |
-| Phone or VoIP call | `Paused(Call)`. Never interfere with call audio. Android silences the mic for ordinary apps during telephony anyway, so continuing would deliver silence while claiming to monitor |
+| Phone or VoIP call | `Paused(Call)`. Never interfere with call audio. We lose the microphone anyway — see below — so continuing would deliver silence while claiming to monitor |
 | Bluetooth removed | `Paused(BluetoothGone)`; auto-resume on reconnect |
-| `read()` error or a sustained run of exactly-zero frames | `Paused(MicPreempted)`; retry with backoff, then surface |
+| **`isClientSilenced()` reports true** | `Paused(MicPreempted)`; retry with backoff, then surface. `read()` errors and sustained zero-frame runs are backstops, not the mechanism |
+
+### Losing the microphone looks like silence, not an error
+
+*(verified)* Android's concurrent-capture policy means **two ordinary apps can never capture at the
+same time**, and the loser keeps receiving buffers of **zeros** — no exception, no failed call. The
+system microphone privacy toggle behaves the same way. In a monitor this is the most dangerous
+failure shape there is, because a quiet room also sounds like nothing.
+
+**Detect it with the platform API:**
+
+```kotlin
+// MUST be registered before capture starts.
+record.registerAudioRecordingCallback(executor, object : AudioManager.AudioRecordingCallback() {
+    override fun onRecordingConfigChanged(configs: List<AudioRecordingConfiguration>) {
+        // configs.any { it.isClientSilenced } -> Paused(MicPreempted)
+    }
+})
+```
+
+`isClientSilenced()` is available from API 29 — exactly our `minSdk` floor, so no version guard.
+
+**We sit below VoIP apps in the priority order and cannot fix that.** Only `CAMCORDER` and
+`VOICE_COMMUNICATION` are *privacy-sensitive* sources, and they win "even if [the other app] has a UI
+on top or started capturing more recently". `AudioSource.MIC` is not privacy-sensitive. Do **not**
+try to climb that ranking by switching source — that would violate ADR-0004 and break the product.
+The foreground service already buys foreground-equivalent priority against other ordinary apps,
+which is the common case.
 
 **`Paused` always carries a reason, and it is shown in both the UI and the notification.** Never a
 silent stop, and never a notification that says "Monitoring" while the streams are closed. For this

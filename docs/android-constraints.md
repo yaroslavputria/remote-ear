@@ -5,21 +5,26 @@
 >
 > Targets `minSdk 29` / `targetSdk 36` ([ADR-0002](adr/0002-min-and-target-sdk.md)).
 
-## Open verification task
+## Verification status
 
-**Before Phase 2 code is written, re-check this document against the current
-`developer.android.com`.** It was written from knowledge with a cutoff, and foreground-service rules
-are among the fastest-moving parts of the platform: recent Android releases have added
-foreground-service *timeouts* for certain types, tightened background starts, and restricted which
-types may be started from `BOOT_COMPLETED`. Specifically confirm, for `targetSdk 36`:
+**Verified against `developer.android.com` on 2026-09-09** (Phase 1 of the
+[implementation plan](implementation-plan.md)). The four questions this section previously carried
+are answered below; sources are listed at the end of this document.
 
-1. whether the `microphone` foreground-service type is subject to any timeout,
-2. the current exemption list for starting a foreground service from the background,
-3. whether `FOREGROUND_SERVICE_MICROPHONE` remains the correct permission name and requirement,
-4. any new user-facing microphone indicators or revocation behaviour.
+| Question | Answer |
+|---|---|
+| Is the `microphone` FGS type subject to a timeout? | **No.** Timeouts apply to `dataSync` and `mediaProcessing` (6 h per 24 h, Android 15+) and `shortService`. `microphone` is not among them |
+| Current background-start exemptions | Listed below — but a **second, stricter layer** applies to microphone services. See *while-in-use restrictions* |
+| Is `FOREGROUND_SERVICE_MICROPHONE` still correct? | **Yes.** Required from Android 14 (API 34), with `RECORD_AUDIO` as a runtime prerequisite |
+| New microphone indicator or revocation behaviour? | No new indicator. But the platform **delivers silence rather than an error** when capture is denied or lost — this changed the design, see *microphone silencing* |
 
-This is Phase 1 of the [implementation plan](implementation-plan.md), and it is a *documentation*
-task with a documentation deliverable — amend this file, do not just read and move on.
+Two findings altered decisions rather than merely confirming them: the **while-in-use restriction**
+and **silence-instead-of-error**. Both are marked below. One more — the Android 15 audio-focus
+requirement — adds an ordering constraint.
+
+Android 16 (API 36) introduces **no** behaviour changes affecting foreground services, microphone
+access, audio focus, or the audio APIs. Its one relevant change is Bluetooth bond-loss handling
+(see below).
 
 ## Permissions
 
@@ -82,9 +87,51 @@ the consequence rather than blocking.
 |---|---|
 | `RECORD_AUDIO` granted before promotion | `SecurityException` on API 34+ |
 | Started from a **visible** Activity (API 31+) | `ForegroundServiceStartNotAllowedException` |
+| Not started from a `BOOT_COMPLETED` receiver | `ForegroundServiceStartNotAllowedException`. Prohibited for `microphone` since Android 14 |
 | `startForeground()` called within a few seconds of `startForegroundService()` | ANR-class crash |
 | Manifest type matches the `startForeground()` type argument | `IllegalArgumentException` / `SecurityException` |
 | Service is `exported="false"` | Any app could start your microphone |
+| No timeout applies | — `microphone` is not a timed type, so a multi-hour session is permitted |
+
+### Two layers of background-start restriction
+
+This is the finding that most changed the picture: **there are two separate restrictions, and the
+microphone type is subject to both.**
+
+**Layer 1 — the general FGS background-start ban (Android 12+).** Broad, with a long exemption list:
+transitioning from a visible activity, high-priority FCM, user interaction with a notification or
+widget, exact alarms, boot and time-change broadcasts, the active input method, geofencing
+transitions, Companion Device Manager, a user-granted battery-optimisation exemption, and
+`SYSTEM_ALERT_WINDOW`. Violation raises `ForegroundServiceStartNotAllowedException`.
+
+**Layer 2 — while-in-use restrictions (Android 14+).** *Narrower exemptions, and it is the one that
+binds us.* Because `RECORD_AUDIO` is a while-in-use permission, the platform evaluates it **at the
+moment the service is created**. Starting a `microphone` foreground service from the background
+raises a **`SecurityException`** — even though `checkSelfPermission()` reports
+`PERMISSION_GRANTED`. The same applies to `camera` and `location` services.
+
+Its exemptions are a much shorter list: a system component starts the service; the service is
+started from an **app widget** or a **notification**; a `PendingIntent` sent by a different, visible
+app; a device-owner policy controller; a `VoiceInteractionService`.
+
+**The consequence for RemoteEar is decisive, and it is good news for the design:** the restriction
+**applies only to *starting* a service, not to one already running.** A service that stays alive in
+a `Paused` state can reopen its audio streams freely — no new start, so no restriction. A service
+that had stopped could not come back at all. This is exactly the argument in
+[ADR-0005](adr/0005-foreground-service-hosts-monitoring.md), and it turns out to rest on a stronger
+rule than the one it was originally written against.
+
+Worth noting for S1 (auto-resume): "started from a notification" is a while-in-use exemption, so a
+`Resume` action on our own notification is a legitimate way to restart a *stopped* service with
+microphone access. Useful as a fallback, but the paused-service design is better — it needs no user
+tap at all.
+
+**Diagnostic.** When this restriction bites, logcat carries:
+
+```text
+Foreground service started from background can not have
+location/camera/microphone access: service SERVICE_NAME
+```
 
 ### Notification
 
@@ -128,6 +175,60 @@ Samsung, Oppo, Vivo and OnePlus all kill background processes more eagerly than 
 no manifest entry compels them not to. The mitigation is not technical but honest: detect that a
 monitoring session ended without the user stopping it, and say so afterwards.
 
+## Microphone silencing and capture priority
+
+**The platform delivers silence, not an error.** When capture is denied or lost, `AudioRecord`
+keeps returning buffers full of zeros. There is no exception and no callback failure. For a monitor
+this is the most dangerous failure shape possible: the app looks like it is working and the user
+hears nothing unusual, because a quiet room also sounds like nothing.
+
+This happens in two situations:
+
+1. **The user disables the microphone** with the system privacy toggle. Apps receive silence.
+2. **Another app wins the microphone.** Since Android 10 a concurrent-capture policy decides who
+   gets audio; the loser is silenced.
+
+**Detect it with the platform API, not a heuristic.** `AudioRecord.registerAudioRecordingCallback()`
+— which must be registered **before** capture starts — delivers an `AudioRecordingConfiguration`
+whose **`isClientSilenced()`** reports exactly this condition. Available from API 29, which is our
+`minSdk` floor, so no version guard is needed. A zero-frame heuristic remains a reasonable
+belt-and-braces backstop, but it is the fallback, not the mechanism.
+
+### Priority ordering
+
+Documented rules, in order:
+
+1. Privileged apps outrank ordinary apps.
+2. Apps with a visible UI **or a foreground service** outrank background apps.
+3. Apps capturing from a **privacy-sensitive** source outrank those that are not.
+4. **Two ordinary apps can never capture at the same time.**
+5. A privileged app can sometimes share input with another app.
+6. Between two background apps of equal priority, the most recently started wins.
+
+Only `CAMCORDER` and `VOICE_COMMUNICATION` are privacy-sensitive.
+
+**`AudioSource.MIC` is not privacy-sensitive — so RemoteEar structurally loses the microphone to any
+VoIP app**, and the documentation is explicit that the privacy-sensitive app wins "even if [the
+other] has a UI on top or started capturing more recently". Rule 2 is what our foreground service
+buys us: it lifts us to foreground-equivalent priority against other *ordinary* apps, which is the
+common case. Rule 3 is the ceiling we cannot raise without violating
+[ADR-0004](adr/0004-media-path-only.md).
+
+That ceiling is acceptable, and it happens to align with intent: when a call starts we want to pause
+anyway ([risk R7](risks.md)). But it must be *observed and reported*, not assumed — hence
+`isClientSilenced()`.
+
+## Audio focus requires the foreground service (Android 15+)
+
+Apps targeting Android 15 (API 35) or higher **must be the top app or be running a foreground
+service** in order to request audio focus. Otherwise `requestAudioFocus()` returns
+`AUDIOFOCUS_REQUEST_FAILED`.
+
+This imposes an **ordering constraint**: request audio focus from inside the running foreground
+service, *after* `startForeground()` succeeds — never from the Activity beforehand, and never
+speculatively. Resuming from `Paused` is safe, because the service is still running and therefore
+still qualifies. One more reason the service outlives the streams.
+
 ## Bluetooth and audio routing
 
 The full explanation is in [feasibility Q1/Q3](feasibility.md) and the rule is
@@ -142,6 +243,19 @@ The full explanation is in [feasibility Q1/Q3](feasibility.md) and the rule is
 | LE Audio is bidirectional by design | *(unverified)* may engage the earbud mic on an active capture stream — [risk R4](risks.md) |
 | Absolute volume varies by earbud | `setVolume()` may be coarse or near-inert at low settings |
 | Codec determines most of the latency | 100–250 ms lives in the earbud, not in our code |
+
+### Bluetooth bond loss (Android 16)
+
+The one Android 16 change relevant to this project. When a previously bonded device fails
+authentication on reconnect, the stack now disconnects the link, keeps local bond information, and
+shows a system dialog asking the user to re-pair. Apps can receive **`ACTION_KEY_MISSING`** to detect
+remote bond loss and give better feedback.
+
+**Do not depend on it.** The documentation states plainly that broadcasting these intents varies by
+OEM; where `ACTION_KEY_MISSING` is not broadcast, the ACL link stays connected and the system removes
+the bond — the Android 15 behaviour. So this is at best a nicer error message layered on top of our
+real mechanism, which stays `AudioDeviceCallback`: it reports what the *audio system* decided, needs
+no Bluetooth permission, and behaves the same on every version.
 
 ### One media route at a time
 
@@ -173,3 +287,17 @@ mention. A continuously-listening app attracts scrutiny:
 - `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` would add policy risk for little gain. Not requested.
 
 Tracked as [risk R3](risks.md) and Phase 7 of the [implementation plan](implementation-plan.md).
+
+## Sources
+
+Verified 2026-09-09 against:
+
+- [Foreground service types](https://developer.android.com/develop/background-work/services/fgs/service-types) — `microphone` type, permission, prerequisites
+- [Foreground service timeouts](https://developer.android.com/develop/background-work/services/fgs/timeout) — which types are timed
+- [Restrictions on starting a foreground service from the background](https://developer.android.com/develop/background-work/services/fgs/restrictions-bg-start) — both restriction layers and their exemptions
+- [Behavior changes: apps targeting Android 15](https://developer.android.com/about/versions/15/behavior-changes-15) — `BOOT_COMPLETED` restrictions, FGS timeouts, audio-focus requirement
+- [Behavior changes: apps targeting Android 16](https://developer.android.com/about/versions/16/behavior-changes-16) and [all apps](https://developer.android.com/about/versions/16/behavior-changes-all) — no audio/FGS changes; Bluetooth bond loss
+- [Sharing audio input](https://developer.android.com/guide/topics/media/sharing-audio-input) — capture priority, privacy-sensitive sources, silencing
+- [`AudioRecordingConfiguration`](https://developer.android.com/reference/android/media/AudioRecordingConfiguration) — `isClientSilenced()`
+
+Re-verify when raising `targetSdk` beyond 36.

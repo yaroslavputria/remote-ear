@@ -28,10 +28,20 @@ Non-negotiable. The app is not shippable without all of these.
 | M12 | Assert actual routing after start and fail loudly if it is wrong | If `TYPE_BLUETOOTH_SCO` appears, the wrong microphone is live |
 | M13 | Tell the user plainly that audio is processed locally and never uploaded | Brief §12 |
 | M14 | Ship with no `INTERNET` permission | Makes M13 verifiable rather than merely stated |
+| M15 | Detect microphone silencing via `isClientSilenced()` and pause with a stated reason | *(verified)* Losing the microphone delivers **silence, not an error** — see below |
 
-M12 and M14 are additions to the brief's own list. M12 because a preferred device is only a request
-and the failure is inaudible-until-it-isn't; M14 because it converts the central privacy promise
-into something a sceptical user can check.
+M12, M14 and M15 are additions to the brief's own list. M12 because a preferred device is only a
+request and the failure is inaudible-until-it-isn't; M14 because it converts the central privacy
+promise into something a sceptical user can check.
+
+**M15 was promoted from "should have" (S6) by the Phase 1 verification.** Android delivers buffers of
+zeros — not an error — when another app wins the microphone or the user flips the privacy toggle. In
+a monitor, silence is indistinguishable from a quiet room, so without this the app confidently
+reports "Monitoring" while relaying nothing. That is the same class of failure as
+[risk R1](risks.md), which is ranked first in the project, so it cannot sit below the line. The
+platform provides `AudioRecord.registerAudioRecordingCallback()` +
+`AudioRecordingConfiguration.isClientSilenced()` at API 29, our `minSdk` floor, which makes it cheap
+as well as necessary.
 
 ## Should have
 
@@ -44,7 +54,7 @@ Wanted in the first release if the must-haves land cleanly. None of these block 
 | S3 | `MIC` versus `UNPROCESSED` input toggle | Resolves [H4](feasibility.md) on real hardware. May become a must if `MIC` processing gates quiet room sound |
 | S4 | Software microphone gain with a limiter | Genuinely useful for hearing a quiet room, but `setVolume()` covers the basic case and gain risks clipping |
 | S5 | Detect a session that ended without the user stopping it, and say so afterwards | The honest mitigation for OEM process kills ([R1](risks.md)) |
-| S6 | Surface "microphone taken by another app" as a distinct state | Better than a generic error, but the generic error is not wrong |
+| ~~S6~~ | ~~Surface "microphone taken by another app" as a distinct state~~ | **Promoted to M15** — the failure turned out to be silent, so a generic error was not merely coarse, it was absent |
 
 ## Later
 

@@ -24,6 +24,17 @@ when the headphones reconnect. If the service **stops** when Bluetooth drops, th
 the background and the phone in another room — it **cannot start itself again**. Auto-resume would
 require the user to walk back, pick up the phone, and reopen the app, which defeats the feature.
 
+> **Verification (2026-09-09) strengthened this argument.** Rule 2 turns out to be the *weaker* of
+> two restrictions. Because `RECORD_AUDIO` is a **while-in-use** permission, Android 14+ evaluates it
+> when the service is *created*: starting a `microphone` foreground service from the background
+> raises a **`SecurityException`** even though `checkSelfPermission()` reports `PERMISSION_GRANTED`,
+> and the exemption list is far shorter than the general one. Crucially, **the restriction applies
+> only to *starting* a service, not to one already running** — so a service kept alive in `Paused`
+> may reopen its streams freely, while a stopped one could not come back at all. A third finding adds
+> a second reason: targeting Android 15+, audio focus can only be obtained while top app **or
+> running a foreground service**, so the surviving service is also what keeps focus obtainable on
+> resume. Details in [android-constraints.md](../android-constraints.md).
+
 ## Decision
 
 **`MonitoringService`, `foregroundServiceType="microphone"`, `exported="false"`, started from a

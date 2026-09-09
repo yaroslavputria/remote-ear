@@ -70,9 +70,22 @@ grep -iE "underrun|sample rate|format|channel|thread|Fast" flinger.txt
 # Is the service actually still in the foreground?
 adb shell dumpsys activity services com.example.remoteear
 
-# Which app currently holds the microphone.
-adb shell dumpsys media.audio_policy | grep -iE "record|input|client"
+# Which app currently holds the microphone, and whether anyone is being silenced.
+adb shell dumpsys media.audio_policy | grep -iE "record|input|client|silenc"
 ```
+
+**Watch for this logcat line** — it means a microphone foreground service was started from the
+background and has been given *no microphone access*, which presents as silence rather than a crash:
+
+```bash
+adb logcat | grep -i "can not have"
+# Foreground service started from background can not have
+# location/camera/microphone access: service SERVICE_NAME
+```
+
+Losing the microphone always looks like **silence, not an error**, so treat "I hear nothing" as
+ambiguous until you check `isClientSilenced()` in the app's own log. A quiet room and a stolen
+microphone are indistinguishable by ear — that is the whole reason the app instruments it.
 
 For Scenario G, snapshot `media.audio_flinger` at the start and at the end and compare underrun
 counts — the delta over hours is the drift signal.
@@ -123,9 +136,13 @@ the two real methods.
 **Needs a second phone.** The emulator's `gsm call` cannot help, because there is no Bluetooth audio
 for it to interact with.
 
-Capture: the audio-focus change codes the app observed, what `AudioRecord.read()` returned during the
-call, whether the call itself was affected at all (it must not be), and whether monitoring resumed
-afterwards.
+Capture: the audio-focus change codes the app observed, whether `isClientSilenced()` went true
+during the call (expected — a VoIP app uses a privacy-sensitive source and outranks us), whether the
+call itself was affected at all (it must not be), and whether monitoring resumed afterwards.
+
+Worth testing separately: a **VoIP call** (WhatsApp, Meet) as well as a cellular one. They take the
+microphone by different mechanisms, and the VoIP case is the one where our lower capture priority
+shows.
 
 ```bash
 adb shell dumpsys audio | grep -iA5 "focus"

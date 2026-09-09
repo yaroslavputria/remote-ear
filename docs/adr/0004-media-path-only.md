@@ -72,14 +72,23 @@ codebase:**
   `setMode`, it is probably violating this ADR. Treat that as the signal it is.
 - **Phone calls are handled by pausing, not by participating.** Since we never enter the
   communication path, a call simply takes audio focus and the microphone; the honest response is to
-  pause. Brief §16 reaches the same conclusion, and it is the correct behaviour regardless — Android
-  silences the microphone for ordinary apps during telephony, so continuing would deliver silence
-  while claiming to monitor.
+  pause. Brief §16 reaches the same conclusion, and it is correct regardless: by the documented
+  capture-priority rules a call outranks us — as a privileged client, or on source priority for VoIP
+  — so continuing would relay silence while reporting "Monitoring".
 - **The sleep-sound feature (brief §23) loses its most obvious implementation.** Platform
   `AcousticEchoCanceler` is documented as reliable on the `VOICE_COMMUNICATION` path, which this ADR
   forbids. That is a real cost, accounted for in
   [ADR-0008](0008-sleep-sound-deferred.md) — where a prior routing blocker turns out to matter more
   anyway.
+- **We accept a lower microphone priority.** *(verified 2026-09-09)* Android's concurrent-capture
+  policy ranks `CAMCORDER` and `VOICE_COMMUNICATION` as *privacy-sensitive* sources, and those win
+  "even if [the other app] has a UI on top or started capturing more recently". `AudioSource.MIC` is
+  not privacy-sensitive, so **RemoteEar structurally loses the microphone to any VoIP app** — and
+  loses it as *silence*, not as an error. This is a genuine cost of the decision, discovered only on
+  verification. It is tolerable for two reasons: the foreground service still buys
+  foreground-equivalent priority against other *ordinary* apps, which is the common case; and when a
+  call is in progress we want to pause anyway. But it must be detected and reported via
+  `isClientSilenced()` rather than assumed — see [risk R7](../risks.md).
 - **Constrains LE Audio only partially.** *(unverified)* LE Audio is bidirectional by design, so a
   stack may engage the earbud microphone without the app touching anything on the prohibited list.
   This ADR cannot prevent that; the `getRoutedDevice()` assertion is what detects it. See

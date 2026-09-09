@@ -6,11 +6,11 @@ two platform rules that interact in a non-obvious way.
 Authoritative: [ADR-0005](../../../../docs/adr/0005-foreground-service-hosts-monitoring.md) and
 [docs/android-constraints.md](../../../../docs/android-constraints.md).
 
-> **Verify before writing service code.** Foreground-service rules move faster than any other part
-> of the platform — recent releases have added service-type timeouts, tightened background starts,
-> and restricted boot-time starts. Phase 1 of the implementation plan exists to re-check this against
-> current `developer.android.com` for `targetSdk 36`. Treat the specifics below as
-> *(needs re-verification)* rather than settled.
+> **Verified 2026-09-09** against current platform documentation for `targetSdk 36`. The
+> `microphone` type has **no timeout**, `FOREGROUND_SERVICE_MICROPHONE` is correct, and Android 16
+> changes nothing here. Sources are listed in
+> [docs/android-constraints.md](../../../../docs/android-constraints.md). **Re-verify when raising
+> `targetSdk` beyond 36** — this area of the platform moves faster than any other.
 
 ## Manifest
 
@@ -35,10 +35,51 @@ permission, no location, no `WAKE_LOCK`, no `REQUEST_IGNORE_BATTERY_OPTIMIZATION
 | Rule | Failure if broken |
 |---|---|
 | `RECORD_AUDIO` granted **before** promoting with `FOREGROUND_SERVICE_TYPE_MICROPHONE` | `SecurityException` on API 34+ |
-| Started from a **visible** Activity (API 31+) | `ForegroundServiceStartNotAllowedException` |
+| Started from a **visible** Activity | `ForegroundServiceStartNotAllowedException` (API 31+) **or `SecurityException`** (API 34+, see below) |
+| Never started from a `BOOT_COMPLETED` receiver | `ForegroundServiceStartNotAllowedException`. Prohibited for `microphone` since Android 14 |
 | `startForeground()` within a few seconds of `startForegroundService()` | ANR-class crash |
 | Manifest type matches the `startForeground()` type argument | `IllegalArgumentException` / `SecurityException` |
 | `exported="false"` | Any app could start the user's microphone |
+
+**No timeout applies.** Timeouts cover `dataSync` and `mediaProcessing` (6 h per 24 h, Android 15+)
+and `shortService`. `microphone` is not a timed type, so multi-hour monitoring is permitted — do not
+build a watchdog against a timeout that does not exist.
+
+### There are two background-start restrictions, not one
+
+Getting this wrong produces the wrong exception and the wrong fix.
+
+**Layer 1 — general FGS background-start ban (Android 12+).** Long exemption list (visible-activity
+transition, high-priority FCM, notification or widget interaction, exact alarms, boot broadcasts,
+input method, geofencing, Companion Device Manager, battery-optimisation exemption,
+`SYSTEM_ALERT_WINDOW`). Raises `ForegroundServiceStartNotAllowedException`.
+
+**Layer 2 — while-in-use restrictions (Android 14+). This is the one that binds a microphone
+service.** `RECORD_AUDIO` is a while-in-use permission, so the platform re-evaluates it *when the
+service is created*. Starting from the background raises a **`SecurityException`** — even though
+`checkSelfPermission()` returns `PERMISSION_GRANTED`, which makes it a confusing bug to diagnose.
+Exemptions are far shorter: a system component; started from an **app widget** or a **notification**;
+a `PendingIntent` from a different visible app; a device owner; a `VoiceInteractionService`.
+
+**It applies only to *starting* a service — not to one already running.** That is precisely why the
+service stays alive while paused (below): a surviving service reopens its streams freely; a stopped
+one cannot come back.
+
+Logcat, when it bites:
+
+```text
+Foreground service started from background can not have
+location/camera/microphone access: service SERVICE_NAME
+```
+
+### Audio focus needs the service (Android 15+)
+
+Targeting Android 15+, an app must be the **top app or running a foreground service** to obtain
+audio focus; otherwise `requestAudioFocus()` merely returns `AUDIOFOCUS_REQUEST_FAILED`.
+
+**Request focus from inside the running service, after `startForeground()` succeeds.** Never
+speculatively from the Activity — that is an ordering bug that presents as an unexplained silent
+failure. Resuming from `Paused` is safe: the service is still running, so it still qualifies.
 
 ## Start sequence
 

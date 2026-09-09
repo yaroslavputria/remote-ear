@@ -85,12 +85,17 @@ user clearly how to resume.
 
 **Pass:** monitoring pauses, the call is entirely unaffected, and monitoring resumes when the call
 ends. The app must never touch call audio.
-**Capture:** the focus-change codes observed, what `AudioRecord.read()` returned during the call,
+**Capture:** the focus-change codes observed, whether `isClientSilenced()` went true during the call,
 resumption behaviour.
 **Answers:** [H8](feasibility.md).
 
 > Needs a second phone. Emulator `gsm call` cannot help, because there is no Bluetooth audio to
 > interact with.
+>
+> **Test a VoIP call too** (WhatsApp, Meet), not just cellular. *(verified)* A VoIP app captures from
+> `VOICE_COMMUNICATION`, a *privacy-sensitive* source that outranks our `MIC` regardless of who is
+> visible — so this is the case that exercises our lower capture priority, and it fails as **silence,
+> not an error**. See [risk R7](risks.md).
 
 ### G — Several hours of monitoring
 

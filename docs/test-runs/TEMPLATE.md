@@ -35,7 +35,7 @@ afterwards.
 | C | Screen locked | | duration, service survived? |
 | D | Backgrounded | | state correct on return? |
 | E | Bluetooth disconnect | | detect time, resume time, both disconnect methods |
-| F | Incoming call | | focus codes, read() behaviour, call unaffected? |
+| F | Incoming call | | focus codes, isClientSilenced()?, call unaffected? Test VoIP separately |
 | G | Multi-hour | | see below |
 
 **Record "not run" explicitly.** Blank cells read as passes later.
