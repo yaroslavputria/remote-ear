@@ -18,6 +18,7 @@ start and hard to get wrong.
 | 7 | [risks.md](risks.md) | Ranked by probability × impact on the product |
 | 8 | [privacy.md](privacy.md) | The invariants, and how they are structurally enforced |
 | — | [adr/](adr/) | Architecture Decision Records — the decisions themselves |
+| — | [dev-setup.md](dev-setup.md) | Toolchain install (no admin rights), and the traps found doing it |
 | — | [test-runs/](test-runs/) | Results from real devices, one file per session |
 
 If you only read one thing, read [ADR-0004](adr/0004-media-path-only.md). It is the constraint the
@@ -53,8 +54,13 @@ Android 15+.
 
 > Can I put the phone in another room and reliably hear its microphone through my Bluetooth earbud?
 
-It needs physical hardware: an Android phone, real Bluetooth headphones, and `adb` (currently not on
-PATH on this machine — the `android-cli` skill covers installing the tooling).
+The toolchain is installed and verified — JDK 21, `adb` 1.0.41, SDK Platform 36, Build-Tools 36.0.0,
+Android Studio, all in the user profile without admin rights. See
+[dev-setup.md](dev-setup.md).
+
+What remains is physical: an Android phone with developer options enabled, and real Bluetooth
+headphones. No emulator is installed, deliberately — it has no Bluetooth audio and can settle none
+of the open hypotheses.
 
 ## Conventions
 
