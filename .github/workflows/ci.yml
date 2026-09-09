@@ -1,0 +1,79 @@
+name: CI
+
+# GitHub Actions is free with unlimited minutes on public repositories.
+#
+# What CI can and cannot do for this project, stated plainly so nobody mistakes a green tick for
+# working software: there is no Bluetooth audio and no device in CI, so routing, latency, codec
+# behaviour, battery, clock drift and OEM process-killing are ALL unverifiable here. Every one of
+# those is physical-device work - see docs/test-matrix.md.
+#
+# So CI earns its keep on three things: the app compiles, the unit tests pass, and the hard
+# invariants in CLAUDE.md still hold.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Pure text checks. No JDK, no Gradle - seconds, and the fastest useful feedback.
+  invariants:
+    name: ADR invariants
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check hard invariants (ADR-0004, ADR-0007)
+        run: bash tools/check-invariants.sh
+
+  build:
+    name: Build and unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The wrapper jar came from a project template. Validating it against known-good Gradle
+      # checksums is a real supply-chain check for an app whose pitch is auditability.
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Assemble debug
+        run: ./gradlew :app:assembleDebug --stacktrace
+
+      - name: Unit tests
+        run: ./gradlew :app:testDebugUnitTest --stacktrace
+
+      # The important one: a dependency can add INTERNET through manifest merging with nobody
+      # writing network code. Only a built manifest can reveal that.
+      - name: Re-check invariants against the merged manifest
+        run: bash tools/check-invariants.sh
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: remoteear-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results
+          path: app/build/reports/tests/
+          if-no-files-found: ignore
