@@ -1,0 +1,104 @@
+# ADR-0004 — Media audio path only: never Bluetooth SCO or the communication path
+
+- **Status:** Accepted
+- **Date:** 2026-09-09
+
+> **The load-bearing decision in this project.** If only one document is read, read this one.
+
+## Context
+
+Brief §6 states the requirement unusually precisely:
+
+```text
+INPUT:   phone's built-in microphone
+OUTPUT:  Bluetooth headphones
+```
+
+and explicitly **not**:
+
+```text
+Bluetooth headset microphone -> phone -> headphones
+```
+
+Android has two largely separate audio paths, and the difference decides whether the product works:
+
+- **The media path.** `USAGE_MEDIA` output goes over **A2DP** (or LC3 for LE Audio) — high quality,
+  and **output-only**. A2DP has no return channel, so it neither requires nor supplies a microphone.
+  An `AudioSource.MIC` capture stream is simply a separate, independent stream.
+- **The communication path.** Intended for calls. Output and input go over **HFP/SCO**: mono, 8 or 16
+  kHz, and **the headset's microphone becomes the system input**.
+
+The crucial insight is *what triggers the switch*. It is not opening an `AudioRecord`. It is
+changing the audio **mode** or the **communication device**. So the failure the brief fears does not
+happen spontaneously — it happens when the app asks for it, usually while trying to "make Bluetooth
+audio work".
+
+## Decision
+
+**RemoteEar stays entirely on the media path. The following are prohibited anywhere in the
+codebase:**
+
+| Prohibited | Why |
+|---|---|
+| `AudioManager.startBluetoothSco()` / `stopBluetoothSco()` | Establishes the SCO link — narrowband, headset mic becomes input |
+| `AudioManager.setMode(MODE_IN_COMMUNICATION)` (or `MODE_IN_CALL`) | Switches the entire device to the comms path |
+| `AudioManager.setCommunicationDevice()` (API 31+) | The modern equivalent |
+| `AudioManager.setSpeakerphoneOn()` | Comms-path routing control |
+| `AudioAttributes.USAGE_VOICE_COMMUNICATION` on the output | Marks the output as a call; invites comms routing |
+| `AudioSource.VOICE_COMMUNICATION` | Requests the comms uplink; pulls in platform AEC/AGC and, on some OEMs, comms routing |
+| `AudioSource.VOICE_RECOGNITION` | Safer than the above, but still special-cased on some OEMs |
+| `TYPE_BLUETOOTH_SCO` as an acceptable routed device | Its presence *is* the failure |
+
+**Instead:**
+
+- Capture with `AudioSource.MIC` (or `UNPROCESSED`), pinned to `TYPE_BUILTIN_MIC`.
+- Play with `USAGE_MEDIA` + `CONTENT_TYPE_SPEECH`, pinned to `TYPE_BLUETOOTH_A2DP` or
+  `TYPE_BLE_HEADSET`.
+- **Assert `getRoutedDevice()` after starting both streams.** A preferred device is a request, not a
+  guarantee; OEM policy can override it. `TYPE_BLUETOOTH_SCO` on either end is a hard error that
+  fails loudly — not a degraded mode that plays on.
+
+## Consequences
+
+- The requirement in brief §6 is satisfied by construction rather than by hoping: the built-in
+  microphone is the input, and full-quality A2DP is the output.
+- Latency and audio quality are the best available on the platform. SCO would have made the product
+  sound like a 1990s phone call.
+- **Two permissions become unnecessary.** `MODIFY_AUDIO_SETTINGS` exists to change global audio state,
+  which is now forbidden; and Bluetooth detection uses `AudioManager.getDevices()`, which exposes
+  device *types* without `BLUETOOTH_CONNECT`. See
+  [ADR-0007](0007-minimal-permission-set.md).
+- **A useful diagnostic:** if a future change starts needing `MODIFY_AUDIO_SETTINGS`, or reaches for
+  `setMode`, it is probably violating this ADR. Treat that as the signal it is.
+- **Phone calls are handled by pausing, not by participating.** Since we never enter the
+  communication path, a call simply takes audio focus and the microphone; the honest response is to
+  pause. Brief §16 reaches the same conclusion, and it is the correct behaviour regardless — Android
+  silences the microphone for ordinary apps during telephony, so continuing would deliver silence
+  while claiming to monitor.
+- **The sleep-sound feature (brief §23) loses its most obvious implementation.** Platform
+  `AcousticEchoCanceler` is documented as reliable on the `VOICE_COMMUNICATION` path, which this ADR
+  forbids. That is a real cost, accounted for in
+  [ADR-0008](0008-sleep-sound-deferred.md) — where a prior routing blocker turns out to matter more
+  anyway.
+- **Constrains LE Audio only partially.** *(unverified)* LE Audio is bidirectional by design, so a
+  stack may engage the earbud microphone without the app touching anything on the prohibited list.
+  This ADR cannot prevent that; the `getRoutedDevice()` assertion is what detects it. See
+  [risk R4](../risks.md).
+
+## Alternatives considered
+
+**Use the communication path deliberately** (`MODE_IN_COMMUNICATION` + SCO). This is what many
+"Bluetooth microphone" tutorials do, and it fails the requirement in the most direct way possible:
+the headset's microphone becomes the input, so the phone in the child's room stops being the
+listening device. It also delivers narrowband mono audio. Rejected outright — it is not a trade-off,
+it is the wrong product.
+
+**`VOICE_COMMUNICATION` capture with media output.** Superficially attractive: it would enable
+platform AEC for the future sleep-sound feature. Rejected — it requests the comms uplink, brings
+AGC and noise suppression that fight the "natural environmental sound" priority in brief §4, and on
+some OEMs drags routing onto the comms path. Optimising the MVP for a deferred feature's
+convenience is exactly the wrong direction.
+
+**Reconsider only if** measurement shows the media path cannot deliver the core use case on real
+hardware — the Phase 2 go/no-go gate in the [implementation plan](../implementation-plan.md). That
+would be a finding significant enough to reopen the product concept, not just this ADR.
