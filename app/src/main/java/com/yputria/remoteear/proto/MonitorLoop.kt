@@ -132,8 +132,15 @@ class MonitorLoop(
         if (minRecord <= 0 || minTrack <= 0) {
             return StartOutcome.Failed("getMinBufferSize rejected 48 kHz mono (rec=$minRecord track=$minTrack)")
         }
+        // Capture side: double the minimum. Measured 3840 -> 7680 bytes = 80 ms, cheap insurance
+        // against scheduler pressure.
         val recordBytes = max(minRecord * 2, FRAME_BYTES * 4)
-        val trackBytes = max(minTrack * 2, FRAME_BYTES * 4)
+
+        // Output side: take the platform minimum as-is. Doubling it here was a mistake, borrowed
+        // from built-in-speaker intuition where minimums are ~20 ms. Measured on the A2DP route the
+        // platform minimum is already 20622 bytes = ~215 ms, so doubling added another ~215 ms of
+        // latency for no glitch benefit. See docs/adr/0009-buffer-sizing-measured.md.
+        val trackBytes = max(minTrack, FRAME_BYTES * 4)
 
         logEnvironment(mic, sink, minRecord, minTrack, recordBytes, trackBytes, inputSource)
 

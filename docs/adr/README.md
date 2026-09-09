@@ -18,9 +18,10 @@ Start from [`TEMPLATE.md`](TEMPLATE.md), or run `/adr <title>`.
 | [0003](0003-audiorecord-audiotrack-for-mvp.md) | SDK `AudioRecord`/`AudioTrack`; Oboe deferred | Accepted |
 | [0004](0004-media-path-only.md) | **Media path only — never Bluetooth SCO** | Accepted |
 | [0005](0005-foreground-service-hosts-monitoring.md) | `microphone` foreground service hosts monitoring and stays alive while paused | Accepted |
-| [0006](0006-audio-format-and-buffering.md) | 48 kHz mono PCM 16-bit, 2× buffers, coarse drift correction | Accepted |
+| [0006](0006-audio-format-and-buffering.md) | 48 kHz mono PCM 16-bit, no resampling; buffer policy revised | **Superseded by [0009](0009-buffer-sizing-measured.md)** |
 | [0007](0007-minimal-permission-set.md) | Four permissions, and no `INTERNET` | Accepted |
 | [0008](0008-sleep-sound-deferred.md) | Sleep sound deferred behind an ordered spike | Accepted |
+| [0009](0009-buffer-sizing-measured.md) | Buffer sizing measured: 2× on capture, platform minimum on the A2DP output | Accepted |
 
 ## The one that matters most
 

@@ -1,6 +1,6 @@
 # ADR-0006 — 48 kHz mono PCM 16-bit, no resampling; buffers at 2× minimum; drift corrected coarsely
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR-0009](0009-buffer-sizing-measured.md) — the buffer policy below was measured wrong on the A2DP output; the format decision stands
 - **Date:** 2026-09-09
 
 ## Context
