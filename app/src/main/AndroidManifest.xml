@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Phase 2 needs exactly one permission.
+         Deliberately absent: FOREGROUND_SERVICE / FOREGROUND_SERVICE_MICROPHONE and
+         POST_NOTIFICATIONS, which Phase 3 adds with the monitoring service; and
+         INTERNET, which this app must never request - its absence is what makes
+         "audio never leaves the phone" verifiable. See docs/adr/0007-minimal-permission-set.md -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.RemoteEar">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>
