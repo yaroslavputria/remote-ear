@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "ask": [
+      "Bash(git push:*)",
+      "Bash(gh pr create:*)",
+      "Bash(gh pr merge:*)"
+    ],
+    "allow": [
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(adb devices:*)",
+      "Bash(adb shell dumpsys:*)",
+      "Bash(adb shell getprop:*)",
+      "Bash(adb shell pm list:*)",
+      "Bash(adb logcat:*)"
+    ]
+  }
+}
