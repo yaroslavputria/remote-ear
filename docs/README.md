@@ -19,6 +19,7 @@ start and hard to get wrong.
 | 8 | [privacy.md](privacy.md) | The invariants, and how they are structurally enforced |
 | — | [adr/](adr/) | Architecture Decision Records — the decisions themselves |
 | — | [dev-setup.md](dev-setup.md) | Toolchain install (no admin rights), and the traps found doing it |
+| — | [design-brief.md](design-brief.md) | Input for UI design work — states, microcopy, constraints |
 | — | [test-runs/](test-runs/) | Results from real devices, one file per session |
 
 If you only read one thing, read [ADR-0004](adr/0004-media-path-only.md). It is the constraint the
