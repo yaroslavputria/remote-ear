@@ -3,6 +3,9 @@
 - **Status:** Accepted
 - **Date:** 2026-09-09
 
+> Deliverable 2 of the project brief (§21): recommended architecture. Compares fully native
+> Kotlin against React Native + a Kotlin native audio module, and recommends one.
+
 ## Context
 
 Brief §7 says React Native "is acceptable and initially preferred if it does not create unnecessary
