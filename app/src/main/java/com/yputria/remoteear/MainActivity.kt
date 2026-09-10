@@ -1,300 +1,78 @@
 package com.yputria.remoteear
 
 import android.Manifest
-import android.content.Context
 import android.content.pm.PackageManager
-import android.database.ContentObserver
-import android.media.AudioDeviceCallback
-import android.media.AudioDeviceInfo
-import android.media.AudioManager
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.provider.Settings
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import com.yputria.remoteear.monitor.InputSource
-import com.yputria.remoteear.monitor.MonitorNotification
-import com.yputria.remoteear.monitor.MonitorState
-import com.yputria.remoteear.monitor.MonitoringService
-import com.yputria.remoteear.monitor.deviceTypeName
-import com.yputria.remoteear.monitor.streamMusicFraction
-import com.yputria.remoteear.monitor.supportsUnprocessed
-import com.yputria.remoteear.monitor.usableBluetoothSinks
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.yputria.remoteear.theme.LocalPalette
 import com.yputria.remoteear.theme.RemoteEarTheme
+import com.yputria.remoteear.ui.MonitorRoute
+import com.yputria.remoteear.ui.MonitorViewModel
 
 /**
- * PHASE 3 SCREEN - still deliberately plain. Phase 4 replaces it with the designed UI from
- * docs/design-brief.md, driven by a ViewModel.
+ * The only Activity, and deliberately thin.
  *
- * What changed from Phase 2: this no longer owns the audio pipeline. It starts and stops
- * [MonitoringService] and *observes* its state, because microphone access in the background
- * requires the service to be the owner. Note there is no longer any FLAG_KEEP_SCREEN_ON - the
- * service is what keeps monitoring alive now, and needing the screen on would defeat the point.
+ * It owns three things the UI layer cannot: the permission dialogs, the window, and the resume-time
+ * refresh. It does *not* own the audio pipeline - that lives in
+ * [com.yputria.remoteear.monitor.MonitoringService], because microphone capture in the background
+ * requires the service to be the owner (ADR-0005). Note also the absence of `FLAG_KEEP_SCREEN_ON`:
+ * the service is what keeps listening alive, and needing the screen on would defeat the point.
  */
 class MainActivity : ComponentActivity() {
 
+    private var viewModel: MonitorViewModel? = null
+
+    private val micPermission = registerForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted -> viewModel?.onPermissionResult(granted) }
+
+    private val notificationPermission = registerForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { /* Soft dependency: denial hides the notification but does not block listening. */ }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         setContent {
             RemoteEarTheme {
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    MonitorScreen()
+                val vm: MonitorViewModel = viewModel()
+                viewModel = vm
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = LocalPalette.current.surface,
+                ) {
+                    MonitorRoute(
+                        viewModel = vm,
+                        onRequestMicPermission = {
+                            micPermission.launch(Manifest.permission.RECORD_AUDIO)
+                        },
+                    )
                 }
             }
         }
-    }
-}
 
-@Composable
-private fun MonitorScreen() {
-    val context = LocalContext.current
-    val audioManager = remember {
-        context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-    }
-
-    val state by MonitoringService.state.collectAsState()
-    val stats by MonitoringService.stats.collectAsState()
-    val endedUnexpectedly by MonitoringService.endedUnexpectedly.collectAsState()
-    val noiseCancellation by MonitoringService.noiseCancellation.collectAsState()
-
-    var hasMic by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
-                PackageManager.PERMISSION_GRANTED,
-        )
-    }
-    var notificationsRequested by remember { mutableStateOf(false) }
-    var inputSource by remember { mutableStateOf(InputSource.Mic) }
-
-    val micLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission(),
-    ) { granted -> hasMic = granted }
-
-    val notificationLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission(),
-    ) { notificationsRequested = true }
-
-    val unprocessedSupported = remember { audioManager.supportsUnprocessed() }
-
-    // Live Bluetooth presence. Recomputing this only on recomposition would leave the Listen
-    // button stale when headphones connect or disconnect - so it is driven by the audio system's
-    // own callback, which also needs no Bluetooth permission.
-    var sinks by remember { mutableStateOf(audioManager.usableBluetoothSinks()) }
-    DisposableEffect(audioManager) {
-        val callback = object : AudioDeviceCallback() {
-            override fun onAudioDevicesAdded(added: Array<out AudioDeviceInfo>?) {
-                sinks = audioManager.usableBluetoothSinks()
-            }
-
-            override fun onAudioDevicesRemoved(removed: Array<out AudioDeviceInfo>?) {
-                sinks = audioManager.usableBluetoothSinks()
-            }
-        }
-        audioManager.registerAudioDeviceCallback(callback, null)
-        onDispose { audioManager.unregisterAudioDeviceCallback(callback) }
-    }
-
-    // The phone's own media volume, mirrored live.
-    //
-    // Our output is USAGE_MEDIA, so it rides STREAM_MUSIC: the physical volume buttons - and, via
-    // A2DP absolute volume, the earbud's own buttons - already scale what the listener hears. This
-    // is read-only on purpose. Android advises against setStreamVolume/adjustStreamVolume because
-    // they change volume for *every* app, and docs/adr/0007-minimal-permission-set.md keeps us out
-    // of global audio state. There is no app-side volume at all: setVolume() caps at 1.0, so it
-    // could only ever attenuate - never help with the "too quiet" complaint this product gets.
-    var systemVolume by remember { mutableStateOf(audioManager.streamMusicFraction()) }
-    DisposableEffect(audioManager) {
-        val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
-            override fun onChange(selfChange: Boolean) {
-                systemVolume = audioManager.streamMusicFraction()
-            }
-        }
-        context.contentResolver.registerContentObserver(
-            Settings.System.CONTENT_URI, true, observer,
-        )
-        onDispose { context.contentResolver.unregisterContentObserver(observer) }
-    }
-
-    val isActive = state is MonitorState.Monitoring || state is MonitorState.Starting
-    val canListen = hasMic && sinks.isNotEmpty()
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Text("RemoteEar", style = MaterialTheme.typography.headlineMedium)
-        Text(
-            "Phase 3 - monitoring runs in a foreground service",
-            style = MaterialTheme.typography.bodySmall,
-        )
-
-        Spacer(Modifier.height(4.dp))
-
-        // State first: this is the safety-relevant information.
-        Text(MonitorNotification.title(state), style = MaterialTheme.typography.titleMedium)
-        Text(MonitorNotification.detail(state), style = MaterialTheme.typography.bodyMedium)
-
-        if (endedUnexpectedly) {
-            Text(
-                "Monitoring stopped on its own last time. Some phones shut down background apps " +
-                    "to save battery — allowing RemoteEar to run in the background in your system " +
-                    "settings may prevent it.",
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Button(onClick = { MonitoringService.acknowledgeUnexpectedEnd() }) { Text("Dismiss") }
-        }
-
-        Spacer(Modifier.height(4.dp))
-
-        Text("Microphone permission: ${if (hasMic) "granted" else "NOT granted"}")
-        if (!hasMic) {
-            Text(
-                "RemoteEar needs the microphone so you can hear this room through your headphones. " +
-                    "Audio is never recorded or sent anywhere.",
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Button(onClick = { micLauncher.launch(Manifest.permission.RECORD_AUDIO) }) {
-                Text("Grant microphone access")
-            }
-        }
-
-        Text(
-            "Bluetooth output: " +
-                if (sinks.isEmpty()) "none connected"
-                else sinks.joinToString { deviceTypeName(it.type) },
-        )
-        Text("UNPROCESSED supported: $unprocessedSupported")
-
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(
-                selected = inputSource == InputSource.Mic,
-                onClick = { inputSource = InputSource.Mic },
-                label = { Text("MIC") },
-                enabled = !isActive,
-            )
-            FilterChip(
-                selected = inputSource == InputSource.Unprocessed,
-                onClick = { inputSource = InputSource.Unprocessed },
-                label = { Text("UNPROCESSED") },
-                enabled = !isActive && unprocessedSupported,
-            )
-        }
-
-        Button(
-            enabled = isActive || canListen,
-            onClick = {
-                if (isActive) {
-                    MonitoringService.stop(context)
-                } else {
-                    // Ask for notification permission before starting: without it the ongoing
-                    // notification is hidden, which is poor for an app holding the microphone.
-                    // It is a soft dependency though - denial does not block the service.
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                        !notificationsRequested &&
-                        ContextCompat.checkSelfPermission(
-                            context,
-                            Manifest.permission.POST_NOTIFICATIONS,
-                        ) != PackageManager.PERMISSION_GRANTED
-                    ) {
-                        notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                    }
-                    // Started from a visible Activity, with RECORD_AUDIO already granted - both
-                    // are hard platform requirements for a microphone foreground service.
-                    MonitoringService.start(context, inputSource)
-                }
-            },
-            modifier = Modifier.fillMaxWidth(),
+        // Asked once, up front, and never blocking: an app that holds the microphone for hours
+        // should be conspicuous, and the ongoing notification is how. See docs/privacy.md.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
         ) {
-            Text(if (isActive) "Stop listening" else "Listen")
+            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
+    }
 
-        // A disabled button should say why rather than just sitting there inert.
-        if (!isActive && !canListen) {
-            Text(
-                when {
-                    !hasMic -> "Grant microphone access to start listening."
-                    else -> "Connect your Bluetooth headphones to start listening."
-                },
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
-
-        (state as? MonitorState.Monitoring)?.let {
-            Text(
-                "Routing: in=${deviceTypeName(it.routedInType)} out=${deviceTypeName(it.routedOutType)}",
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
-
-        Spacer(Modifier.height(4.dp))
-
-        Text("Volume: ${(systemVolume * 100).toInt()}%")
-        Text(
-            "Set with your phone's volume buttons, or from the earbud itself — the same media " +
-                "volume as music. There is no separate app volume, on purpose: a second control " +
-                "could only ever make this quieter.",
-            style = MaterialTheme.typography.bodySmall,
-        )
-
-        Text(
-            "Noise cancellation: " +
-                if (noiseCancellation < 0.01f) "off" else "${(noiseCancellation * 100).toInt()}%",
-        )
-        Slider(
-            value = noiseCancellation,
-            onValueChange = { MonitoringService.setNoiseCancellation(it) },
-        )
-        Text(
-            "At the minimum it is fully off. Turning it up cuts low-frequency rumble — fans, " +
-                "traffic, air conditioning — and makes the sound thinner. High settings can also " +
-                "hide quiet sounds like breathing, so it is worth checking in a quiet room.",
-            style = MaterialTheme.typography.bodySmall,
-        )
-
-        stats?.let {
-            Text("Counters", style = MaterialTheme.typography.titleSmall)
-            Text(it, style = MaterialTheme.typography.bodySmall)
-        }
-
-        Spacer(Modifier.height(8.dp))
-        Text(
-            "Audio is processed on this phone only and played to your headphones. Nothing is " +
-                "recorded, saved, or sent anywhere. RemoteEar has no internet access.",
-            style = MaterialTheme.typography.bodySmall,
-        )
+    /** Permission and volume can both change in the system settings while we are stopped. */
+    override fun onResume() {
+        super.onResume()
+        viewModel?.refresh()
     }
 }

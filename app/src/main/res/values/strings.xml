@@ -1,3 +1,125 @@
 <resources>
+
+    <!--
+      Every user-visible word in RemoteEar, verbatim from docs/design-spec.md.
+
+      This file is a safety surface, not a localisation formality. The screen and the notification
+      read the *same* resources, which is how they are prevented from disagreeing: the worst failure
+      this product can have is a user believing they are listening when they are not.
+
+      Three rules the wording follows. Keep them if you edit anything here:
+        1. Every paused or stopped line opens with the consequence - "you are not hearing the room" -
+           before the cause.
+        2. No word implies the app is watching, detecting or alerting. It does none of those.
+        3. Nothing is called "connected" when audio is not flowing.
+    -->
+
     <string name="app_name">RemoteEar</string>
+    <string name="wordmark">REMOTEEAR</string>
+
+    <!-- States: screen -->
+    <string name="state_idle_title">Not listening</string>
+    <string name="state_idle_body">Leave the phone in the room, tap Listen, and walk away. You\'ll hear the room in your headphones.</string>
+    <string name="state_idle_no_headphones_body">Connect the earbud you\'ll be carrying. RemoteEar plays only to headphones, never to the speaker.</string>
+    <string name="state_starting_title">Starting</string>
+    <string name="state_starting_body">Opening the microphone and checking your headphones. This takes a moment.</string>
+    <string name="state_listening_title">Listening</string>
+    <string name="state_listening_body">This room is playing to your headphones. You can put the phone down and leave.</string>
+    <string name="state_listening_dim_body">Tap anywhere to brighten the screen.</string>
+    <string name="state_paused_title">Paused</string>
+    <string name="state_stopped_title">Stopped</string>
+
+    <!-- Pause reasons. Each is a reason line plus what happens next. -->
+    <string name="paused_headphones_reason">Bluetooth headphones disconnected.</string>
+    <string name="paused_headphones_body">Reconnect your headphones and listening continues on its own.</string>
+    <string name="paused_call_reason">A phone call is in progress.</string>
+    <string name="paused_call_body">Listening continues by itself when the call ends.</string>
+    <string name="paused_audio_reason">Another app is playing sound to your headphones.</string>
+    <string name="paused_audio_body">Stop that app and listening continues by itself.</string>
+    <string name="paused_mic_reason">Another app is using the microphone.</string>
+    <string name="paused_mic_body">Close that app and listening continues by itself.</string>
+
+    <!-- Stopped. The route failure is its own message because it means the wrong microphone would
+         have been live - see docs/adr/0004-media-path-only.md. -->
+    <string name="stopped_audio_reason">The microphone could not be opened.</string>
+    <string name="stopped_route_reason">Your headphones connected as a headset, not for music.</string>
+    <string name="stopped_body">You are not hearing the room. Tap Listen to try again.</string>
+    <string name="stopped_detail">Error · %1$s</string>
+
+    <!-- Microphone permission -->
+    <string name="permission_title">Microphone access needed</string>
+    <string name="permission_body">RemoteEar plays this room to your headphones, live. It cannot do that without the microphone. Nothing is recorded, saved, or sent anywhere — the app has no internet access.</string>
+    <string name="permission_action">Allow microphone</string>
+    <string name="permission_footnote">If you refused before, Android will not ask again — open Settings › Apps › RemoteEar › Permissions.</string>
+
+    <!-- The primary control -->
+    <string name="action_listen">Listen</string>
+    <string name="action_stop">Stop listening</string>
+    <string name="action_starting">Starting…</string>
+    <string name="action_blocked_headphones">Connect headphones first</string>
+    <string name="action_blocked_microphone">Allow the microphone first</string>
+
+    <!-- Status: exactly the four things the brief asks for, no fifth -->
+    <string name="status_microphone">Microphone</string>
+    <string name="status_headphones">Headphones</string>
+    <string name="status_mic_allowed">Allowed</string>
+    <string name="status_mic_denied">Not allowed</string>
+    <string name="status_mic_in_use">In use by RemoteEar</string>
+    <string name="status_mic_call">Used by the call</string>
+    <string name="status_mic_other_app">Used by another app</string>
+    <string name="status_headphones_none">None connected</string>
+    <string name="status_headphones_disconnected">Disconnected</string>
+    <string name="status_headphones_busy">Busy with another app</string>
+
+    <!-- Levels -->
+    <string name="label_volume">Volume</string>
+    <string name="volume_hint">Set with the phone buttons</string>
+    <string name="volume_content_description">Volume %1$d%%. Set with the phone buttons or the earbud.</string>
+    <string name="label_noise">Noise reduction</string>
+    <string name="noise_off">Off</string>
+    <string name="noise_low">Low</string>
+    <string name="noise_medium">Medium</string>
+    <string name="noise_high">High</string>
+    <string name="noise_caption">More reduction can also hide quiet sounds.</string>
+
+    <string name="privacy_footnote">Audio is processed on this phone only and played to your headphones. Nothing is recorded, saved, or sent anywhere. RemoteEar has no internet access.</string>
+
+    <!-- A past session that ended without the user stopping it (docs/risks.md R1). A report about
+         history, deliberately worded so it cannot be mistaken for the current state. -->
+    <string name="ended_unexpectedly">Listening stopped on its own last time. Some phones shut down background apps to save battery — allowing RemoteEar to run in the background may prevent it.</string>
+    <string name="action_dismiss">Dismiss</string>
+
+    <!-- Diagnostics. Not part of the design; collapsed by default. It exists because docs/test-matrix.md
+         needs the MIC/UNPROCESSED A/B and the frame counters on a real device. -->
+    <string name="diagnostics">Diagnostics</string>
+    <string name="diagnostics_input">Input source</string>
+    <string name="diagnostics_input_mic">MIC</string>
+    <string name="diagnostics_input_unprocessed">UNPROCESSED</string>
+    <string name="diagnostics_unprocessed_unsupported">UNPROCESSED is not supported on this phone.</string>
+    <string name="diagnostics_routing">Routing · in %1$s · out %2$s</string>
+
+    <!-- Notification. The title carries the reason, because a collapsed notification often shows
+         the title alone. -->
+    <string name="notification_channel">Listening</string>
+    <string name="notification_channel_description">Shows whether RemoteEar is listening, and lets you stop it.</string>
+    <string name="notif_starting_title">Starting</string>
+    <string name="notif_starting_text">Getting ready to listen.</string>
+    <string name="notif_listening_title">Listening</string>
+    <string name="notif_listening_text">The room is playing to your headphones.</string>
+    <string name="notif_paused_headphones_title">Paused — headphones disconnected</string>
+    <string name="notif_paused_headphones_text">You are not hearing the room. Reconnect your headphones to continue.</string>
+    <string name="notif_paused_call_title">Paused — phone call in progress</string>
+    <string name="notif_paused_call_text">You are not hearing the room. Listening continues when the call ends.</string>
+    <string name="notif_paused_audio_title">Paused — another app is using the audio</string>
+    <string name="notif_paused_audio_text">You are not hearing the room. Stop that app to continue.</string>
+    <string name="notif_paused_mic_title">Paused — another app is using the microphone</string>
+    <string name="notif_paused_mic_text">You are not hearing the room. Close that app to continue.</string>
+    <string name="notif_stopped_audio_title">Stopped — the microphone could not be opened</string>
+    <string name="notif_stopped_route_title">Stopped — your headphones connected as a headset</string>
+    <string name="notif_stopped_text">You are not hearing the room. Open RemoteEar to try again.</string>
+    <string name="notif_idle_title">Not listening</string>
+    <string name="notif_idle_text">Open RemoteEar to start.</string>
+    <string name="notif_action_stop">Stop listening</string>
+    <string name="notif_action_open">Open RemoteEar</string>
+
 </resources>
