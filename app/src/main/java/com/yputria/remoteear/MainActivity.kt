@@ -3,11 +3,15 @@ package com.yputria.remoteear
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.database.ContentObserver
 import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -26,7 +30,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,7 +39,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -46,7 +48,7 @@ import com.yputria.remoteear.monitor.MonitorNotification
 import com.yputria.remoteear.monitor.MonitorState
 import com.yputria.remoteear.monitor.MonitoringService
 import com.yputria.remoteear.monitor.deviceTypeName
-import com.yputria.remoteear.monitor.isNoiseSuppressionAvailable
+import com.yputria.remoteear.monitor.streamMusicFraction
 import com.yputria.remoteear.monitor.supportsUnprocessed
 import com.yputria.remoteear.monitor.usableBluetoothSinks
 import com.yputria.remoteear.theme.RemoteEarTheme
@@ -85,8 +87,7 @@ private fun MonitorScreen() {
     val stats by MonitoringService.stats.collectAsState()
     val endedUnexpectedly by MonitoringService.endedUnexpectedly.collectAsState()
     val volume by MonitoringService.volume.collectAsState()
-    val noiseSuppression by MonitoringService.noiseSuppression.collectAsState()
-    val noiseReduction by MonitoringService.noiseReduction.collectAsState()
+    val noiseCancellation by MonitoringService.noiseCancellation.collectAsState()
 
     var hasMic by remember {
         mutableStateOf(
@@ -106,7 +107,6 @@ private fun MonitorScreen() {
     ) { notificationsRequested = true }
 
     val unprocessedSupported = remember { audioManager.supportsUnprocessed() }
-    val noiseSuppressionAvailable = remember { isNoiseSuppressionAvailable() }
 
     // Live Bluetooth presence. Recomputing this only on recomposition would leave the Listen
     // button stale when headphones connect or disconnect - so it is driven by the audio system's
@@ -124,6 +124,27 @@ private fun MonitorScreen() {
         }
         audioManager.registerAudioDeviceCallback(callback, null)
         onDispose { audioManager.unregisterAudioDeviceCallback(callback) }
+    }
+
+    // The phone's own media volume, mirrored live.
+    //
+    // Our output is USAGE_MEDIA, so it rides STREAM_MUSIC: the physical volume buttons - and, via
+    // A2DP absolute volume, the earbud's own buttons - already scale what the listener hears. This
+    // is read-only on purpose. Android advises against setStreamVolume/adjustStreamVolume because
+    // they change volume for *every* app, and docs/adr/0007-minimal-permission-set.md keeps us out
+    // of global audio state. Showing it is what makes the app slider comprehensible rather than a
+    // mysterious second control.
+    var systemVolume by remember { mutableStateOf(audioManager.streamMusicFraction()) }
+    DisposableEffect(audioManager) {
+        val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
+            override fun onChange(selfChange: Boolean) {
+                systemVolume = audioManager.streamMusicFraction()
+            }
+        }
+        context.contentResolver.registerContentObserver(
+            Settings.System.CONTENT_URI, true, observer,
+        )
+        onDispose { context.contentResolver.unregisterContentObserver(observer) }
     }
 
     val isActive = state is MonitorState.Monitoring || state is MonitorState.Starting
@@ -242,49 +263,38 @@ private fun MonitorScreen() {
 
         Spacer(Modifier.height(4.dp))
 
-        Text("Output volume: ${(volume * 100).toInt()}%")
+        Text("Phone volume: ${(systemVolume * 100).toInt()}%  (volume buttons / earbud)")
+        Text(
+            "Your phone's media volume already controls how loud this is — from the phone's " +
+                "buttons, or from the earbud itself. The slider below only trims below that.",
+            style = MaterialTheme.typography.bodySmall,
+        )
+
+        Text("App trim: ${(volume * 100).toInt()}%")
         Slider(
             value = volume,
             onValueChange = { MonitoringService.setVolume(it) },
         )
-
-        Text(
-            "Noise reduction: " +
-                if (noiseReduction < 0.01f) "off" else "${(noiseReduction * 100).toInt()}%",
-        )
-        Slider(
-            value = noiseReduction,
-            onValueChange = { MonitoringService.setNoiseReduction(it) },
-        )
-        Text(
-            "Reduces low-frequency rumble — fans, traffic, air conditioning. Turning it up makes " +
-                "the sound thinner but never quieter, so it cannot mute the room.",
-            style = MaterialTheme.typography.bodySmall,
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        if (volume < 0.95f) {
             Text(
-                if (noiseSuppressionAvailable) {
-                    "Device noise suppression"
-                } else {
-                    "Device noise suppression (unavailable)"
-                },
-            )
-            Switch(
-                checked = noiseSuppression,
-                onCheckedChange = { MonitoringService.setNoiseSuppression(it) },
-                enabled = noiseSuppressionAvailable,
+                "Trim is below full — the earbud cannot get louder than this even at maximum " +
+                    "phone volume.",
+                style = MaterialTheme.typography.bodySmall,
             )
         }
+
         Text(
-            "On/off only — Android offers no strength control for this one. It is tuned to isolate " +
-                "a nearby voice and discard background sound, but here the background is what you " +
-                "want to hear, so it can suppress the very thing you are listening for. Off by " +
-                "default; try it both ways in a quiet room.",
+            "Noise cancellation: " +
+                if (noiseCancellation < 0.01f) "off" else "${(noiseCancellation * 100).toInt()}%",
+        )
+        Slider(
+            value = noiseCancellation,
+            onValueChange = { MonitoringService.setNoiseCancellation(it) },
+        )
+        Text(
+            "At the minimum it is fully off. Turning it up cuts low-frequency rumble — fans, " +
+                "traffic, air conditioning — and makes the sound thinner. High settings can also " +
+                "hide quiet sounds like breathing, so it is worth checking in a quiet room.",
             style = MaterialTheme.typography.bodySmall,
         )
 

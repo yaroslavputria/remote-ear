@@ -242,10 +242,25 @@ audio.
 
 ## Volume and gain
 
-- **Output level: `AudioTrack.setVolume(0f..1f)`.** Per-track gain, affects nothing else on the
-  device, needs no permission, and is instant. The UI slider in brief §9 maps directly to it.
-- **Never modify system stream volume** (`adjustStreamVolume`, `setStreamVolume`). Changing a global
-  setting from inside a utility app is user-hostile and outlives the app's own session.
+**There are two gains, and the platform owns the important one.** Because playback uses
+`USAGE_MEDIA` it rides `STREAM_MUSIC`, so the phone's media volume already scales what the listener
+hears — from the physical buttons, and via A2DP absolute volume from the earbud's own controls too.
+That is the natural control for this product: the phone is in another room, so the earbud is what
+the user can actually reach.
+
+- **The phone's media volume** is therefore the primary control, and the app **only reads it**
+  (`getStreamVolume` / `getStreamMaxVolume`, mirrored live with a `ContentObserver` on
+  `Settings.System` — no permission needed).
+- **`AudioTrack.setVolume(0f..1f)`** is a per-track *trim* underneath it. Useful for pulling the
+  level down, but it multiplies with system volume, so a forgotten trim silently caps how loud the
+  earbud can get. The UI says so when it is below full.
+- **Never modify system stream volume** (`adjustStreamVolume`, `setStreamVolume`). Android's own
+  documentation advises against them because they change volume for *every* app, and doing so would
+  drag in global audio state that [ADR-0007](adr/0007-minimal-permission-set.md) keeps out.
+
+*Note for testing:* the physical buttons only adjust **media** volume while media is actually
+playing. With monitoring stopped they adjust the ringer instead, which makes "the buttons do
+nothing" an easy false conclusion when testing idle.
 - **Software microphone gain is deferred.** `setVolume` cannot exceed 1.0, so making a quiet room
   *louder* needs a multiply in the loop plus a limiter to avoid clipping into distortion. That is
   genuinely useful for this product but is a "should have", not a "must have" — see

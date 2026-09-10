@@ -453,3 +453,17 @@ class AudioPipeline(
 /** Whether the platform offers noise suppression at all. Device-dependent. */
 fun isNoiseSuppressionAvailable(): Boolean = runCatching { NoiseSuppressor.isAvailable() }
     .getOrDefault(false)
+
+/**
+ * The phone's media volume as a 0f..1f fraction.
+ *
+ * Read-only by design. Because playback uses `USAGE_MEDIA` it rides `STREAM_MUSIC`, so the physical
+ * volume buttons and the earbud's own controls already scale what the listener hears. Android
+ * advises against `setStreamVolume`/`adjustStreamVolume` because they change volume for every app,
+ * and docs/adr/0007-minimal-permission-set.md keeps this app out of global audio state.
+ */
+fun AudioManager.streamMusicFraction(): Float {
+    val max = getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+    if (max <= 0) return 0f
+    return getStreamVolume(AudioManager.STREAM_MUSIC).toFloat() / max
+}

@@ -88,16 +88,13 @@ The brief specifies four, and the design should not add a fifth:
 - **The control is disabled when it cannot work** — no microphone permission, or no headphones
   connected — and **says why** rather than sitting inert. Bluetooth presence is live, so it
   enables and disables as headphones come and go.
-- **Output volume** — a slider. Affects only this app's playback, never the system volume.
-- **Noise reduction** — a slider, like volume. Reduces low-frequency rumble; safe, because it cannot
-  mute the room. Needs a label that does not overpromise: it is a tone control, not magic.
-- **Device noise suppression** — a separate toggle, **off by default**, because Android offers no
-  strength control for it. Needs a one-line explanation of why it may make things *worse* here, and
-  should **not** look like a recommended setting.
-
-> Design note: these two look similar but differ in risk. The slider is safe at any setting; the
-> toggle can suppress the very sounds the user is listening for. The design should make the toggle
-> feel like an experiment and the slider feel like a normal control.
+- **Volume** — the phone’s own media volume already controls loudness, from the phone buttons and
+  from the earbud itself, because playback rides the media stream. The app therefore **shows** that
+  level and offers only a *trim* beneath it. Design should make the phone volume look like the real
+  control and the trim look secondary — a forgotten trim silently caps how loud the earbud can get.
+- **Noise cancellation** — a single slider, like volume, **off at the minimum**. One control, even
+  though two mechanisms sit underneath it (see [mvp-scope.md](mvp-scope.md) S7). High settings can
+  hide quiet sounds, so the label needs to avoid implying that more is better.
 - **Microphone permission request** — with a short rationale shown *before* the system dialog.
 
 ## Reference sketch from the product brief

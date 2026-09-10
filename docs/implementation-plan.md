@@ -100,8 +100,20 @@ Now that the audio path is proven, give it somewhere to live.
   promotion.
 - The pipeline moves in essentially unchanged; the service owns its lifecycle.
 
-**Gate:** Scenarios C and D — monitoring continues with the app backgrounded, and with the screen
-locked, for at least 30 minutes. The notification reflects the true state.
+**Gate: PASSED 2026-09-10** —
+[test run](test-runs/2026-09-10-oneplus-cph2399-phase3.md), OnePlus CPH2399 / Android 14.
+
+Scenarios C and D both pass: monitoring continued with the app backgrounded and with the screen
+locked. Verified against the platform's own view rather than just the tester's report —
+`isForeground=true`, `types=00000080` (= `FOREGROUND_SERVICE_TYPE_MICROPHONE`), `createdFromFg=true`,
+a low-importance notification carrying the Stop action, and the routing assertion still reading
+`in=BUILTIN_MIC out=BLUETOOTH_A2DP` through a service-hosted session.
+
+> **The "at least 30 minutes" part of this gate was not met** — the service had been up 2 m 25 s
+> when measured. The *mechanism* is proven; endurance is not, and a 30-minute run would not settle
+> it either. The multi-hour question is Scenario G in Phase 6, which exists for exactly this and
+> targets the risk that actually threatens it ([R1](risks.md), OEM process kill). Phase 4 proceeds
+> on the mechanism; the duration evidence comes from Phase 6.
 
 ## Phase 4 — UI
 
@@ -187,8 +199,8 @@ they are.
  0  docs ............................ committed                   [done]
  1  verify platform docs ............ no unverified claims        [done]
  2  throwaway prototype ............. HEAR THE ROOM               [PASSED]
- 3  foreground service .............. scenarios C, D            <-- next
- 4  Compose UI ...................... all states reachable
+ 3  foreground service .............. scenarios C, D              [PASSED]
+ 4  Compose UI ...................... all states reachable       <-- next
  5  robustness ...................... scenarios E, F
  6  long run + battery .............. scenario G                  [GO / NO-GO]
  7  polish + release ................ releasable

@@ -53,27 +53,30 @@ Wanted in the first release if the must-haves land cleanly. None of these block 
 | S2 | Underrun, drift and lag counters, with periodic log summaries | The diagnostic surface for Scenario G. Needed to *understand* the product, not to run it |
 | S3 | `MIC` versus `UNPROCESSED` input toggle | Resolves [H4](feasibility.md) on real hardware. May become a must if `MIC` processing gates quiet room sound |
 | S4 | Software microphone gain with a limiter | Genuinely useful for hearing a quiet room, but `setVolume()` covers the basic case and gain risks clipping |
-| S7 | **Adjustable low-frequency noise reduction** (slider) plus the platform noise-suppression **toggle** — *added 2026-09-10, shipped early in Phase 3* | See below |
-
-**Two different controls, because the platform forces the split.** Android's `NoiseSuppressor` has
-**no strength parameter** — unlike `BassBoost` or `Virtualizer` it is enabled or disabled and
-nothing in between — so "adjustable" had to be implemented in our own loop.
-
-- **Noise reduction (slider, 0–100%)** — a one-pole high-pass, cutoff sweeping ~20–400 Hz. It
-  attenuates the rumble people actually complain about (fans, traffic, air conditioning) and
-  **cannot mute the room**: it changes the *tone* of what you hear, never *whether* you hear it.
-  That property is why a high-pass was chosen over an adjustable **noise gate**, which would have
-  re-created [risk R2](risks.md) with a user-facing dial. A gate would need its own ADR.
-- **Device noise suppression (toggle, default off)** — the platform effect, guarded by
-  `isAvailable()`. This one *is* the R2 mechanism: tuned to isolate a near-field talker and discard
-  ambient sound, when here the ambient sound is the signal. Labelled as an experiment to A/B in a
-  quiet room, deliberately **not** presented as recommended.
-
-Neither replaces S4. If the goal is "hear the child more clearly", **gain is the right lever and
-suppression is the wrong one**. If measurement shows the toggle degrades quiet-room audio, the honest
-response is to remove it rather than bury it in a settings screen.
 | S5 | Detect a session that ended without the user stopping it, and say so afterwards | The honest mitigation for OEM process kills ([R1](risks.md)) |
 | ~~S6~~ | ~~Surface "microphone taken by another app" as a distinct state~~ | **Promoted to M15** — the failure turned out to be silent, so a generic error was not merely coarse, it was absent |
+| S7 | **Noise cancellation as a single level control** — *added 2026-09-10, shipped early in Phase 3* | See below |
+
+### S7 — one control, two mechanisms underneath
+
+Android’s `NoiseSuppressor` has **no strength parameter** — unlike `BassBoost` or `Virtualizer` it
+is enabled or disabled and nothing in between — so anything adjustable had to be implemented in our
+own loop. Rather than exposing that split to the user as two controls, **one slider drives both**:
+at the minimum everything is off; above it the filter scales continuously and the platform
+suppressor is simply on.
+
+- **Our half** is a one-pole high-pass, cutoff sweeping ~20–400 Hz. It attenuates the rumble people
+  actually complain about (fans, traffic, air conditioning) and **cannot mute the room**: it changes
+  the *tone* of what you hear, never *whether* you hear it. That property is why a high-pass was
+  chosen over an adjustable **noise gate**, which would have re-created [risk R2](risks.md) and
+  handed the user a dial to do it with. A gate would need its own ADR.
+- **The platform half** *is* the R2 mechanism: tuned to isolate a near-field talker and discard
+  ambient sound, when here the ambient sound is the signal. It is why high settings carry a caveat
+  in the UI rather than being presented as better.
+
+Neither replaces S4. If the goal is “hear the child more clearly”, **gain is the right lever and
+suppression is the wrong one**. If measurement shows high settings degrade quiet-room audio, the
+honest response is a lower ceiling, not a caveat buried in a settings screen.
 
 ## Later
 

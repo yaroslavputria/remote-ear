@@ -2,8 +2,8 @@
 
 Planning corpus for RemoteEar — an Android phone used as a remote microphone, played to Bluetooth
 headphones. These documents are deliverables 1–9 of §21 of the project brief, plus the evidence
-gathered since. **Phase 2 has proven the core use case on real hardware**; the disposable prototype
-that proved it lives in [`app/`](../app/).
+gathered since. **The core use case is proven on real hardware** and monitoring now runs in a
+foreground service; the code lives in [`app/`](../app/).
 
 ## Read in this order
 
@@ -41,7 +41,7 @@ rest of the design hangs from.
 
 ## Current state
 
-**Phases 0, 1 and 2 complete.** The question the whole project rests on is answered on hardware
+**Phases 0–3 complete.** The question the whole project rests on is answered on hardware
 ([test run](test-runs/2026-09-09-oneplus-cph2399.md), OnePlus CPH2399 / Android 14):
 
 > Can I put the phone in another room and reliably hear its microphone through my Bluetooth earbud?
@@ -64,9 +64,15 @@ Both phases corrected our own assumptions rather than merely confirming them:
   [ADR-0006](adr/0006-audio-format-and-buffering.md)). The latency budget is revised upward to
   **~435–605 ms**.
 
-**Next: Phase 3** — move the pipeline into a `microphone` foreground service so monitoring survives
-backgrounding and screen lock. Confirmed necessary the hard way: with no service, monitoring stopped
-the moment the app was backgrounded.
+**Phase 3 also complete.** Monitoring now runs in a `microphone` foreground service and survives
+backgrounding and screen lock — verified against the platform’s own view: `isForeground=true`,
+`types=00000080` (`FOREGROUND_SERVICE_TYPE_MICROPHONE`), started from a visible Activity, with the
+routing assertion still holding through a service-hosted session
+([test run](test-runs/2026-09-10-oneplus-cph2399-phase3.md)). Endurance is *not* established — the
+measured session was 2 m 25 s, and the multi-hour question belongs to Scenario G in Phase 6.
+
+**Next: Phase 4** — the designed UI from [design-brief.md](design-brief.md), driven by a ViewModel,
+with every state reachable and each `Paused` reason rendered.
 
 Still open on hardware: a numeric latency figure (no clap test yet), LE Audio (H2 — no hardware), an
 OEM baseline (no near-AOSP device), and all Android 15/16 behaviour (untestable on API 34). The

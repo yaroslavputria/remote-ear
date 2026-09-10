@@ -57,8 +57,16 @@ class MonitoringService : Service() {
         // Controls are collected rather than pushed, so the UI needs no binding and the settings
         // survive stop/start. Applied immediately, so a slider drag is not laggy.
         scope.launch { volume.collect { pipeline.setVolume(it) } }
-        scope.launch { noiseSuppression.collect { pipeline.setNoiseSuppression(it) } }
-        scope.launch { noiseReduction.collect { pipeline.setNoiseReduction(it) } }
+
+        // One user-facing control drives both mechanisms. At zero everything is off; above zero the
+        // filter scales continuously and the platform suppressor - which has no level of its own -
+        // is simply on.
+        scope.launch {
+            noiseCancellation.collect { level ->
+                pipeline.setNoiseReduction(level)
+                pipeline.setNoiseSuppression(level > 0f)
+            }
+        }
     }
 
     /**
@@ -211,37 +219,32 @@ class MonitoringService : Service() {
         }
 
         private val _volume = MutableStateFlow(1f)
-        private val _noiseSuppression = MutableStateFlow(false)
 
         /** Per-track output gain, 0f..1f. Never the system stream volume. */
         val volume: StateFlow<Float> = _volume.asStateFlow()
-
-        /**
-         * Optional platform noise suppression. **Defaults to off on purpose** — it is the same
-         * mechanism as docs/risks.md R2 and may suppress the quiet ambient sounds this product
-         * exists to relay. See [AudioPipeline.setNoiseSuppression].
-         */
-        val noiseSuppression: StateFlow<Boolean> = _noiseSuppression.asStateFlow()
 
         fun setVolume(value: Float) {
             _volume.value = value.coerceIn(0f, 1f)
         }
 
-        fun setNoiseSuppression(enabled: Boolean) {
-            _noiseSuppression.value = enabled
-        }
-
-        private val _noiseReduction = MutableStateFlow(0f)
+        private val _noiseCancellation = MutableStateFlow(0f)
 
         /**
-         * Adjustable low-frequency noise reduction, 0f (off) to 1f. Separate from
-         * [noiseSuppression] because the platform effect has no strength control at all - see
-         * [AudioPipeline.setNoiseReduction].
+         * The single noise-cancellation level, 0f (off) to 1f (strongest). **Defaults to off.**
+         *
+         * One control by design, rather than exposing the two mechanisms underneath it: our
+         * adjustable high-pass filter (continuous) and the platform NoiseSuppressor (on/off only,
+         * because Android provides no level for it). At zero both are inactive; above zero the
+         * filter scales with the level and the suppressor is simply on.
+         *
+         * Worth remembering when picking defaults: the platform-suppressor half is the same
+         * mechanism as docs/risks.md R2, so a high setting is the likeliest way to lose the quiet
+         * ambient sounds this product exists to relay.
          */
-        val noiseReduction: StateFlow<Float> = _noiseReduction.asStateFlow()
+        val noiseCancellation: StateFlow<Float> = _noiseCancellation.asStateFlow()
 
-        fun setNoiseReduction(amount: Float) {
-            _noiseReduction.value = amount.coerceIn(0f, 1f)
+        fun setNoiseCancellation(level: Float) {
+            _noiseCancellation.value = level.coerceIn(0f, 1f)
         }
 
         /**
