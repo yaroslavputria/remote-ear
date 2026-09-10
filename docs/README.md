@@ -20,6 +20,8 @@ foreground service; the code lives in [`app/`](../app/).
 | — | [adr/](adr/) | Architecture Decision Records — the decisions themselves |
 | — | [dev-setup.md](dev-setup.md) | Toolchain install (no admin rights), and the traps found doing it |
 | — | [design-brief.md](design-brief.md) | Input for UI design work — states, microcopy, constraints |
+| — | [design-spec.md](design-spec.md) | What the design returned: tokens, verbatim copy, layout, icon. The reference the UI code matches |
+| — | [design/screens.html](design/screens.html) | The designed screens, flattened out of the delivered bundle so they open in any browser |
 | — | [test-runs/](test-runs/) | Results from real devices, one file per session |
 
 If you only read one thing, read [ADR-0004](adr/0004-media-path-only.md). It is the constraint the
@@ -71,8 +73,13 @@ routing assertion still holding through a service-hosted session
 ([test run](test-runs/2026-09-10-oneplus-cph2399-phase3.md)). Endurance is *not* established — the
 measured session was 2 m 25 s, and the multi-hour question belongs to Scenario G in Phase 6.
 
-**Next: Phase 4** — the designed UI from [design-brief.md](design-brief.md), driven by a ViewModel,
-with every state reachable and each `Paused` reason rendered.
+**Phase 4 is built** — the designed UI from [design-spec.md](design-spec.md), driven by a
+ViewModel, with every state a literal in `MonitorPreviews.kt`. Its rendering has **not** been
+looked at on a device yet; the gate is only partially met.
+
+**Next: Phase 5** — the pause triggers: audio focus, calls, Bluetooth disconnect and reconnect,
+microphone preemption. This is the phase that decides whether the product can be trusted near a
+child, because every one of those events is currently untested behaviour.
 
 Still open on hardware: a numeric latency figure (no clap test yet), LE Audio (H2 — no hardware), an
 OEM baseline (no near-AOSP device), and all Android 15/16 behaviour (untestable on API 34). The

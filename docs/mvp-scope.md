@@ -65,6 +65,7 @@ Wanted in the first release if the must-haves land cleanly. None of these block 
 | S5 | Detect a session that ended without the user stopping it, and say so afterwards | The honest mitigation for OEM process kills ([R1](risks.md)) |
 | ~~S6~~ | ~~Surface "microphone taken by another app" as a distinct state~~ | **Promoted to M15** — the failure turned out to be silent, so a generic error was not merely coarse, it was absent |
 | S7 | **Noise cancellation as a single level control** — *added 2026-09-10, shipped early in Phase 3* | See below |
+| S8 | **The listening screen dims itself after 20 s untouched** — *added 2026-09-10 from the design, shipped in Phase 4* | See below |
 
 ### S7 — one control, two mechanisms underneath
 
@@ -86,6 +87,25 @@ suppressor is simply on.
 Neither replaces S4. If the goal is “hear the child more clearly”, **gain is the right lever and
 suppression is the wrong one**. If measurement shows high settings degrade quiet-room audio, the
 honest response is a lower ceiling, not a caveat buried in a settings screen.
+
+### S8 — the listening screen dims itself
+
+The design proposed it and the brief had only asked for a *note* on how dim the screen could go. It
+is worth having: the phone is left in a room where someone is asleep, and a bright screen there is a
+cost the product imposes for nothing. After 20 s untouched the surface goes black, the state text
+drops to ~5:1 and Stop to ~4.6:1, and everything below Stop stops being drawn — about a tenth of the
+light. Any touch restores it, and that first touch is absorbed rather than passed through, so a blind
+tap in the dark cannot hit Stop.
+
+**State text and Stop never fade**, and a state change cancels the dim. A dimmed screen must still
+answer "is it listening?" from a doorway — if dimming could hide a pause, it would be breaking
+invariant 7 to save a little light.
+
+**Its value depends on the screen timeout**, which is worth stating rather than discovering:
+[Phase 3](implementation-plan.md) deliberately dropped `FLAG_KEEP_SCREEN_ON` because the service is
+what keeps listening alive, so on a default phone the screen turns off entirely before 20 s of
+dimming buys anything. This is for the user who has a long timeout, not a reason to hold the screen
+on.
 
 ## Later
 

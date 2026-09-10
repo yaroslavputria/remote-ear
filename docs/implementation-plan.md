@@ -115,18 +115,43 @@ a low-importance notification carrying the Stop action, and the routing assertio
 > targets the risk that actually threatens it ([R1](risks.md), OEM process kill). Phase 4 proceeds
 > on the mechanism; the duration evidence comes from Phase 6.
 
-## Phase 4 — UI
+## Phase 4 — UI — **built 2026-09-10, rendering unverified on hardware**
 
-- Compose screen matching brief §9: title, Bluetooth dot, microphone dot, START/STOP, volume slider.
-- `MonitorViewModel` exposing a single `StateFlow<MonitorState>`; the state machine from
-  [audio-pipeline.md](audio-pipeline.md) is the source of truth and lives in the service.
-- Permission flow with a rationale before the request, and a route to app settings after a permanent
-  denial.
-- Bluetooth presence and hotplug via `AudioManager.registerAudioDeviceCallback`.
-- The local-only privacy statement (M13) on the main screen.
+Built from [design-spec.md](design-spec.md), the design returned against
+[design-brief.md](design-brief.md). What shipped:
+
+- The designed screen: state badge, headline, reason, supporting text, one 92 dp control, the
+  four-item status panel, the volume readout, the noise slider, the privacy footnote.
+- `MonitorViewModel` collapsing the service's state plus permission, Bluetooth presence and the
+  phone's media volume into a single `StateFlow<MonitorUiState>`. The state machine still lives in
+  the service and remains the source of truth.
+- A `Screen` type distinct from `MonitorState`: "no permission" and "no headphones" are screens the
+  design specifies but the pipeline has no state for.
+- All copy in `strings.xml`, read by **both** the screen and the notification, so the two cannot
+  disagree — the design's central rule.
+- Every state as a `@Preview`, including all four pause reasons and both error kinds.
+- The palette, with dynamic colour deliberately off, and the designed adaptive icon.
+- **Volume slider dropped** — brief §9 asked for one; [M10](mvp-scope.md) settled that loudness is
+  the phone's media volume and an app control could only attenuate. The screen shows the level and
+  says where to change it.
+- Two things the design added and the brief had not asked for: the dimmed listening state
+  ([S8](mvp-scope.md)) and the app icon.
+
+Fixed on the way through: the service classified a failed start by **substring-matching the error
+message** for "Bluetooth", and every routing-failure message contains `BLUETOOTH_SCO` — so the one
+failure [ADR-0004](adr/0004-media-path-only.md) exists to catch would have been reported as
+"headphones disconnected, reconnect to continue". Now an enum, `FailureCause`, decided at the site of
+the failure.
 
 **Gate:** every state in the machine is reachable and correctly rendered, including each `Paused`
 reason. Denying microphone permission produces an explanation, not a dead button.
+
+**Gate status: partially met.** Reachability is met — each state is a literal in
+`MonitorPreviews.kt`, and the permission screen carries a rationale and an "Allow microphone" button
+rather than a dead control. *Correctly rendered* is **not** verified: the build installs and the
+process runs without crashing, but nothing has yet looked at the screens on a device or in a preview
+renderer. Still to check by eye: the four pause reasons, the two error kinds, the dim state and its
+touch-to-wake, the light theme, and whether the fixed layout holds without clipping.
 
 ## Phase 5 — Robustness
 
