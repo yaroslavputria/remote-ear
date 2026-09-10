@@ -53,19 +53,25 @@ Wanted in the first release if the must-haves land cleanly. None of these block 
 | S2 | Underrun, drift and lag counters, with periodic log summaries | The diagnostic surface for Scenario G. Needed to *understand* the product, not to run it |
 | S3 | `MIC` versus `UNPROCESSED` input toggle | Resolves [H4](feasibility.md) on real hardware. May become a must if `MIC` processing gates quiet room sound |
 | S4 | Software microphone gain with a limiter | Genuinely useful for hearing a quiet room, but `setVolume()` covers the basic case and gain risks clipping |
-| S7 | **Platform noise suppression as a default-off toggle** — *added 2026-09-10, and shipped early in Phase 3* | See the caveat below |
+| S7 | **Adjustable low-frequency noise reduction** (slider) plus the platform noise-suppression **toggle** — *added 2026-09-10, shipped early in Phase 3* | See below |
 
-**S7 needs its caveat recorded, because it cuts against the product.** `NoiseSuppressor` is the same
-mechanism as [risk R2](risks.md): suppressors are tuned to isolate a near-field talker and discard
-ambient sound, but here **the ambient sound is the signal** — breathing, rustling, a distant
-whimper. So it ships **off by default**, labelled as an experiment to A/B in a quiet room, and
-guarded by `NoiseSuppressor.isAvailable()`.
+**Two different controls, because the platform forces the split.** Android's `NoiseSuppressor` has
+**no strength parameter** — unlike `BassBoost` or `Virtualizer` it is enabled or disabled and
+nothing in between — so "adjustable" had to be implemented in our own loop.
 
-It is deliberately *not* presented as a recommended setting, and it does not replace S4: if the goal
-is "hear the child more clearly", **gain is the right lever and suppression is the wrong one**. If
-measurement shows it degrades quiet-room audio, the honest response is to remove it rather than bury
-it in a settings screen. That would need an ADR either way, since [L3](#later) had scheduled
-filtering for after the core monitor was proven.
+- **Noise reduction (slider, 0–100%)** — a one-pole high-pass, cutoff sweeping ~20–400 Hz. It
+  attenuates the rumble people actually complain about (fans, traffic, air conditioning) and
+  **cannot mute the room**: it changes the *tone* of what you hear, never *whether* you hear it.
+  That property is why a high-pass was chosen over an adjustable **noise gate**, which would have
+  re-created [risk R2](risks.md) with a user-facing dial. A gate would need its own ADR.
+- **Device noise suppression (toggle, default off)** — the platform effect, guarded by
+  `isAvailable()`. This one *is* the R2 mechanism: tuned to isolate a near-field talker and discard
+  ambient sound, when here the ambient sound is the signal. Labelled as an experiment to A/B in a
+  quiet room, deliberately **not** presented as recommended.
+
+Neither replaces S4. If the goal is "hear the child more clearly", **gain is the right lever and
+suppression is the wrong one**. If measurement shows the toggle degrades quiet-room audio, the honest
+response is to remove it rather than bury it in a settings screen.
 | S5 | Detect a session that ended without the user stopping it, and say so afterwards | The honest mitigation for OEM process kills ([R1](risks.md)) |
 | ~~S6~~ | ~~Surface "microphone taken by another app" as a distinct state~~ | **Promoted to M15** — the failure turned out to be silent, so a generic error was not merely coarse, it was absent |
 

@@ -58,6 +58,7 @@ class MonitoringService : Service() {
         // survive stop/start. Applied immediately, so a slider drag is not laggy.
         scope.launch { volume.collect { pipeline.setVolume(it) } }
         scope.launch { noiseSuppression.collect { pipeline.setNoiseSuppression(it) } }
+        scope.launch { noiseReduction.collect { pipeline.setNoiseReduction(it) } }
     }
 
     /**
@@ -228,6 +229,19 @@ class MonitoringService : Service() {
 
         fun setNoiseSuppression(enabled: Boolean) {
             _noiseSuppression.value = enabled
+        }
+
+        private val _noiseReduction = MutableStateFlow(0f)
+
+        /**
+         * Adjustable low-frequency noise reduction, 0f (off) to 1f. Separate from
+         * [noiseSuppression] because the platform effect has no strength control at all - see
+         * [AudioPipeline.setNoiseReduction].
+         */
+        val noiseReduction: StateFlow<Float> = _noiseReduction.asStateFlow()
+
+        fun setNoiseReduction(amount: Float) {
+            _noiseReduction.value = amount.coerceIn(0f, 1f)
         }
 
         /**

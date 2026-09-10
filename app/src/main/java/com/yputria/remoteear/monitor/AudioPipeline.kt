@@ -101,6 +101,13 @@ class AudioPipeline(
     @Volatile var routedInType = -1; private set
     @Volatile var routedOutType = -1; private set
     @Volatile var noiseSuppressionEnabled = false; private set
+    @Volatile var noiseReduction = 0f; private set
+
+    // High-pass filter coefficient, or -1 to bypass entirely. Written by the UI thread, read by the
+    // audio thread. The two `hpPrev*` values are audio-thread-only state, so they need no volatile.
+    @Volatile private var hpAlpha = -1f
+    private var hpPrevIn = 0f
+    private var hpPrevOut = 0f
 
     val isRunning: Boolean get() = running
     val underrunCount: Int get() = track?.underrunCount ?: 0
@@ -203,6 +210,7 @@ class AudioPipeline(
         attachNoiseSuppressor(rec)
 
         resetCounters()
+        resetFilter()
         rec.startRecording()
         trk.play()
 
@@ -265,6 +273,7 @@ class AudioPipeline(
                 if (running) loopError = "AudioRecord.read returned $read"
                 break
             }
+            applyNoiseReduction(buffer, read)
             val written = trk.write(buffer, 0, read)
             val t2 = System.nanoTime()
             if (written < 0) {
@@ -332,6 +341,57 @@ class AudioPipeline(
         Log.i(LOG_TAG, "noise suppression -> $enabled")
     }
 
+    /**
+     * Continuously adjustable low-frequency noise reduction, 0f (off) to 1f (strongest).
+     *
+     * This exists because the platform's [NoiseSuppressor] has **no strength control** - it is
+     * enabled or disabled, nothing in between - so anything adjustable has to be our own filter.
+     *
+     * It is a one-pole high-pass: it attenuates the low-frequency rumble people actually complain
+     * about (fans, traffic, HVAC, handling noise) and leaves the mid and high band alone. That
+     * choice is deliberate. **A high-pass cannot mute the room**, so unlike an adjustable noise
+     * *gate* it does not re-create [risk R2] - it changes the tone of what you hear, never whether
+     * you hear it. If a gate is ever wanted, it needs its own decision record, because silencing a
+     * quiet room is the failure this product cannot afford.
+     *
+     * Cost: a few float operations per sample, no allocation, and fully bypassed at 0f.
+     */
+    fun setNoiseReduction(amount: Float) {
+        val a = amount.coerceIn(0f, 1f)
+        noiseReduction = a
+        hpAlpha = if (a < 0.01f) {
+            -1f // bypass: leave the samples untouched
+        } else {
+            // 20 Hz (barely audible effect) up to 400 Hz (thin, voice-only)
+            val cutoffHz = 20f + a * 380f
+            val rc = 1f / (2f * Math.PI.toFloat() * cutoffHz)
+            val dt = 1f / SAMPLE_RATE
+            rc / (rc + dt)
+        }
+        Log.i(LOG_TAG, "noise reduction -> $a (alpha=$hpAlpha)")
+    }
+
+    /** In-place one-pole high-pass. Called only from the audio thread; allocates nothing. */
+    private fun applyNoiseReduction(buffer: ShortArray, frames: Int) {
+        val alpha = hpAlpha
+        if (alpha < 0f) return
+        var prevIn = hpPrevIn
+        var prevOut = hpPrevOut
+        for (i in 0 until frames) {
+            val x = buffer[i].toFloat()
+            val y = alpha * (prevOut + x - prevIn)
+            prevIn = x
+            prevOut = y
+            buffer[i] = when {
+                y > 32767f -> Short.MAX_VALUE
+                y < -32768f -> Short.MIN_VALUE
+                else -> y.toInt().toShort()
+            }
+        }
+        hpPrevIn = prevIn
+        hpPrevOut = prevOut
+    }
+
     private fun attachNoiseSuppressor(rec: AudioRecord) {
         if (!isNoiseSuppressionAvailable()) {
             Log.i(LOG_TAG, "NoiseSuppressor unavailable on this device")
@@ -354,6 +414,12 @@ class AudioPipeline(
         val drift = framesIn - framesOut
         return "frames in=$framesIn out=$framesOut drift=$drift underruns=$underrunCount " +
             "avgRead=${avgRead}us avgWrite=${avgWrite}us silenced=$clientSilenced"
+    }
+
+    /** Filter memory must not carry across sessions, or the first frames click. */
+    private fun resetFilter() {
+        hpPrevIn = 0f
+        hpPrevOut = 0f
     }
 
     private fun resetCounters() {

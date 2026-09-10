@@ -89,8 +89,15 @@ The brief specifies four, and the design should not add a fifth:
   connected — and **says why** rather than sitting inert. Bluetooth presence is live, so it
   enables and disables as headphones come and go.
 - **Output volume** — a slider. Affects only this app's playback, never the system volume.
-- **Noise suppression** — a toggle, **off by default**, needing a one-line explanation of why it may
-  make things *worse* here (see below). It should not look like a recommended setting.
+- **Noise reduction** — a slider, like volume. Reduces low-frequency rumble; safe, because it cannot
+  mute the room. Needs a label that does not overpromise: it is a tone control, not magic.
+- **Device noise suppression** — a separate toggle, **off by default**, because Android offers no
+  strength control for it. Needs a one-line explanation of why it may make things *worse* here, and
+  should **not** look like a recommended setting.
+
+> Design note: these two look similar but differ in risk. The slider is safe at any setting; the
+> toggle can suppress the very sounds the user is listening for. The design should make the toggle
+> feel like an experiment and the slider feel like a normal control.
 - **Microphone permission request** — with a short rationale shown *before* the system dialog.
 
 ## Reference sketch from the product brief

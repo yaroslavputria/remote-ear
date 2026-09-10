@@ -86,6 +86,7 @@ private fun MonitorScreen() {
     val endedUnexpectedly by MonitoringService.endedUnexpectedly.collectAsState()
     val volume by MonitoringService.volume.collectAsState()
     val noiseSuppression by MonitoringService.noiseSuppression.collectAsState()
+    val noiseReduction by MonitoringService.noiseReduction.collectAsState()
 
     var hasMic by remember {
         mutableStateOf(
@@ -247,13 +248,31 @@ private fun MonitorScreen() {
             onValueChange = { MonitoringService.setVolume(it) },
         )
 
+        Text(
+            "Noise reduction: " +
+                if (noiseReduction < 0.01f) "off" else "${(noiseReduction * 100).toInt()}%",
+        )
+        Slider(
+            value = noiseReduction,
+            onValueChange = { MonitoringService.setNoiseReduction(it) },
+        )
+        Text(
+            "Reduces low-frequency rumble — fans, traffic, air conditioning. Turning it up makes " +
+                "the sound thinner but never quieter, so it cannot mute the room.",
+            style = MaterialTheme.typography.bodySmall,
+        )
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                if (noiseSuppressionAvailable) "Noise suppression" else "Noise suppression (unavailable)",
+                if (noiseSuppressionAvailable) {
+                    "Device noise suppression"
+                } else {
+                    "Device noise suppression (unavailable)"
+                },
             )
             Switch(
                 checked = noiseSuppression,
@@ -262,9 +281,10 @@ private fun MonitorScreen() {
             )
         }
         Text(
-            "Off by default on purpose. Noise suppression is tuned to isolate a nearby voice and " +
-                "discard background sound — but here the background is what you want to hear. " +
-                "Try it both ways in a quiet room before leaving it on.",
+            "On/off only — Android offers no strength control for this one. It is tuned to isolate " +
+                "a nearby voice and discard background sound, but here the background is what you " +
+                "want to hear, so it can suppress the very thing you are listening for. Off by " +
+                "default; try it both ways in a quiet room.",
             style = MaterialTheme.typography.bodySmall,
         )
 
