@@ -112,17 +112,31 @@ permission-free and closer to what the audio system actually decided.
 
 ## Format and buffers
 
-48 kHz · mono · PCM 16-bit · **on both ends** · ~20 ms frames (960 frames = 1920 bytes) · buffers at
-`max(minBufferSize * 2, frameBytes * 4)`.
+48 kHz · mono · PCM 16-bit · **on both ends** · ~20 ms frames (960 frames = 1920 bytes).
 
-- **Both ends identical**, or the platform silently inserts a resampler.
-- Check `getMinBufferSize()` for `ERROR_BAD_VALUE`.
+Buffer sizing is **asymmetric**, and the asymmetry is load-bearing:
+
+```kotlin
+val recordBytes = max(minRecord * 2, frameBytes * 4)   // ~80 ms  - doubling is cheap here
+val trackBytes  = max(minTrack,      frameBytes * 4)   // ~215 ms - already generous on A2DP
+```
+
+**Do not make these symmetric.** Measured on hardware, `AudioTrack.getMinBufferSize` on an A2DP
+route returns ~20 622 bytes ≈ **215 ms** — the platform has already budgeted for the Bluetooth link.
+Doubling it added another ~215 ms of latency for no glitch benefit, and was the largest app-side
+contributor to delay until it was found. On the capture side the minimum genuinely is marginal, so
+doubling there is worth it.
+
+- **Both ends identical format**, or the platform silently inserts a resampler.
+- Check `getMinBufferSize()` for `ERROR_BAD_VALUE` on both.
 - Do not "optimise" to 16 kHz — it saves nothing measurable and costs the natural-room-sound quality
   the product is for.
-- Do not shrink buffers to the platform minimum — 20–60 ms saved against a 100–250 ms earbud jitter
-  buffer, in exchange for glitches.
+- **`minTrack` is route-dependent**, so log the actual buffer sizes every session rather than
+  assuming them.
+- If long-run testing shows output underruns, the answer is a modest 1.25–1.5× multiplier, **not** a
+  return to 2×.
 
-→ [ADR-0006](../../../docs/adr/0006-audio-format-and-buffering.md)
+→ [ADR-0009](../../../docs/adr/0009-buffer-sizing-measured.md), which supersedes ADR-0006
 
 ## The loop: dedicated thread, zero allocation
 

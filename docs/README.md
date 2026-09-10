@@ -1,9 +1,9 @@
 # RemoteEar documentation
 
 Planning corpus for RemoteEar — an Android phone used as a remote microphone, played to Bluetooth
-headphones. **No application code exists yet**; these documents are deliverables 1–9 of §21 of the
-project brief, written so that Phase 2 (the prototype that proves the core use case) is cheap to
-start and hard to get wrong.
+headphones. These documents are deliverables 1–9 of §21 of the project brief, plus the evidence
+gathered since. **Phase 2 has proven the core use case on real hardware**; the disposable prototype
+that proved it lives in [`app/`](../app/).
 
 ## Read in this order
 
@@ -34,34 +34,44 @@ rest of the design hangs from.
 | **Audio APIs** | `AudioRecord` + `AudioTrack`; Oboe deferred ([ADR-0003](adr/0003-audiorecord-audiotrack-for-mvp.md)) |
 | **Routing** | **Media path only — never Bluetooth SCO** ([ADR-0004](adr/0004-media-path-only.md)) |
 | **Background** | Foreground service, type `microphone`, survives pauses ([ADR-0005](adr/0005-foreground-service-hosts-monitoring.md)) |
-| **Format** | 48 kHz, mono, PCM 16-bit, no resampling ([ADR-0006](adr/0006-audio-format-and-buffering.md)) |
+| **Format** | 48 kHz, mono, PCM 16-bit, no resampling ([ADR-0009](adr/0009-buffer-sizing-measured.md)) |
+| **Buffers** | 2× minimum on capture; **platform minimum** on the A2DP output ([ADR-0009](adr/0009-buffer-sizing-measured.md)) |
 | **Permissions** | Four. No `INTERNET`, no Bluetooth, no location ([ADR-0007](adr/0007-minimal-permission-set.md)) |
 | **Sleep sound** | Deferred behind an ordered spike ([ADR-0008](adr/0008-sleep-sound-deferred.md)) |
 
 ## Current state
 
-Phases 0 and 1 complete. The platform rules are verified against current documentation as of
-2026-09-09 ([android-constraints.md](android-constraints.md) carries the findings and sources), and
-[risk R10](risks.md) is closed.
-
-Phase 1 changed three things rather than merely confirming them: a stricter *while-in-use*
-background-start restriction (which strengthens
-[ADR-0005](adr/0005-foreground-service-hosts-monitoring.md)); the discovery that losing the
-microphone delivers **silence, not an error**, which promoted silencing detection to a must-have
-(M15) and replaced a heuristic with `isClientSilenced()`; and an audio-focus ordering constraint on
-Android 15+.
-
-**Next: Phase 2** — the throwaway prototype whose only job is to answer:
+**Phases 0, 1 and 2 complete.** The question the whole project rests on is answered on hardware
+([test run](test-runs/2026-09-09-oneplus-cph2399.md), OnePlus CPH2399 / Android 14):
 
 > Can I put the phone in another room and reliably hear its microphone through my Bluetooth earbud?
+> **Yes.**
 
-The toolchain is installed and verified — JDK 21, `adb` 1.0.41, SDK Platform 36, Build-Tools 36.0.0,
-Android Studio, all in the user profile without admin rights. See
-[dev-setup.md](dev-setup.md).
+Routing verified as `in=BUILTIN_MIC out=BLUETOOTH_A2DP` with no SCO anywhere — and `BLUETOOTH_SCO`
+*was* offered in the device list and correctly declined, the first hardware evidence that
+[ADR-0004](adr/0004-media-path-only.md) holds. A quiet room stayed audible
+([risk R2](risks.md) not landing), and frames in equalled frames out exactly over 27 seconds.
 
-What remains is physical: an Android phone with developer options enabled, and real Bluetooth
-headphones. No emulator is installed, deliberately — it has no Bluetooth audio and can settle none
-of the open hypotheses.
+Both phases corrected our own assumptions rather than merely confirming them:
+
+- **Phase 1** found a stricter *while-in-use* background-start restriction (which strengthens
+  [ADR-0005](adr/0005-foreground-service-hosts-monitoring.md)); that losing the microphone delivers
+  **silence, not an error**, promoting `isClientSilenced()` detection to must-have M15; and an
+  audio-focus ordering constraint on Android 15+. [Risk R10](risks.md) is closed.
+- **Phase 2** found that the platform's minimum `AudioTrack` buffer on A2DP is already ~215 ms, so
+  the 2× rule had doubled it. Removing that recovered ~215 ms — more than Oboe was estimated to
+  offer ([ADR-0009](adr/0009-buffer-sizing-measured.md) supersedes
+  [ADR-0006](adr/0006-audio-format-and-buffering.md)). The latency budget is revised upward to
+  **~435–605 ms**.
+
+**Next: Phase 3** — move the pipeline into a `microphone` foreground service so monitoring survives
+backgrounding and screen lock. Confirmed necessary the hard way: with no service, monitoring stopped
+the moment the app was backgrounded.
+
+Still open on hardware: a numeric latency figure (no clap test yet), LE Audio (H2 — no hardware), an
+OEM baseline (no near-AOSP device), and all Android 15/16 behaviour (untestable on API 34). The
+toolchain is installed without admin rights — see [dev-setup.md](dev-setup.md). No emulator is
+installed, deliberately: it has no Bluetooth audio and can settle none of the open hypotheses.
 
 ## Conventions
 

@@ -126,27 +126,47 @@ either prefer an A2DP fallback or tell the user plainly.
 
 Brief §14 accepts "a few hundred milliseconds". The budget:
 
-| Stage | Typical | Controlled by |
+> **Corrected 2026-09-09 after first measurement on hardware.** The original desk estimate below
+> assumed an `AudioTrack` buffer of 20–60 ms. On a real A2DP route the platform's *minimum* is
+> ~215 ms — see the revised table and [ADR-0009](adr/0009-buffer-sizing-measured.md). The original
+> total of 180–400 ms was too optimistic.
+
+| Stage | Measured / estimated | Controlled by |
 |---|---|---|
-| Microphone capture buffer | 20–40 ms | Us — buffer sizing |
-| Application read/write loop | 10–20 ms | Us — one frame |
-| `AudioTrack` buffer | 20–60 ms | Us — buffer sizing |
+| Microphone capture buffer | **80 ms** *(measured: 2 × 3 840 B min)* | Us — buffer sizing |
+| Application read/write loop | ~20 ms | Us — one frame |
+| `AudioTrack` buffer on A2DP | **~215 ms** *(measured: platform minimum, 20 622 B)* | **The platform** — not reducible by us |
 | Android mixer + A2DP encode | 20–40 ms | Platform |
 | **Bluetooth link + codec + earbud jitter buffer** | **100–250 ms** | **The headphones** |
-| **Total** | **≈180–400 ms** | typically around 250 ms |
+| **Total** | **≈435–605 ms** | *(estimate — only a clap test settles it)* |
 
-Two conclusions follow.
+Two caveats on that arithmetic. It assumes steady-state `AudioTrack` occupancy sits near capacity,
+which a blocking-write loop makes likely but does not guarantee; and the platform buffer and the
+earbud's jitter buffer may partly overlap rather than summing cleanly. So treat the total as an
+upper-ish estimate, *(measure)* by clap test. The one hard number so far is subjective: the first
+tester called it "noticeably delayed but usable" — at a point when app-side buffering was ~510 ms,
+before [ADR-0009](adr/0009-buffer-sizing-measured.md) removed ~215 ms of it.
 
-**The dominant term is not ours.** Well over half the latency lives inside the earbud's receive
-jitter buffer and codec, and no amount of application-side work reduces it. SBC and AAC are the
-worst offenders (AAC is often the worst on Android); aptX Low Latency and LC3/LE Audio can bring the
-link term down to roughly 40–70 ms. *(measure)* per headphone class — see
+Three conclusions follow.
+
+**The largest app-side win was a buffer arithmetic mistake, not a missing API.** Sizing the output
+buffer at 2 × the platform minimum — reasonable on a speaker route where minimums are ~20 ms — added
+~215 ms on A2DP, where the platform minimum already accounts for the link. Fixing that recovered
+more latency than Oboe was ever estimated to offer.
+
+**The dominant terms are not ours.** After the fix, the two biggest contributors are the platform's
+A2DP `AudioTrack` minimum (~215 ms) and the earbud's own receive jitter buffer and codec
+(100–250 ms). Together they are the large majority of the total, and **neither is reducible by
+application code** — the first is a platform floor, the second lives in the headphones. SBC and AAC
+are the worst offenders (AAC is often the worst on Android); aptX Low Latency and LC3/LE Audio can
+bring the link term down to roughly 40–70 ms. *(measure)* per headphone class — see
 [test-matrix.md](test-matrix.md).
 
-**Therefore Oboe/AAudio is not worth it for the MVP.** A low-latency native path could shave perhaps
-20–40 ms off the application-side terms, against a 100–250 ms term it cannot touch — roughly a 10%
-change in total latency, for the cost of an NDK build, a C++ layer, and a new class of crash. A2DP
-output typically will not grant a fast mixer path anyway. Deferred in
+**Therefore Oboe/AAudio is still not worth it for the MVP.** A low-latency native path could shave
+perhaps 20–40 ms off the application-side terms — under 10% of a ~500 ms total, against ~315 ms of
+platform-and-link terms it cannot touch — for the cost of an NDK build, a C++ layer, and a new class
+of crash. A2DP output typically will not grant a fast mixer path anyway, which is the same reason the
+platform minimum is so large. Deferred in
 [ADR-0003](adr/0003-audiorecord-audiotrack-for-mvp.md).
 
 Measurement method for Phase 2: clap near the phone while recording the earbud output on a second
@@ -302,19 +322,24 @@ Decided in [ADR-0001](adr/0001-native-kotlin-over-react-native.md).
 
 ## Answerable only on hardware
 
-Everything above marked *(measure)*, consolidated. These feed [test-matrix.md](test-matrix.md) and
-gate Phase 2:
+Everything above marked *(measure)*, consolidated. These feed [test-matrix.md](test-matrix.md).
+Status after the first hardware run —
+[2026-09-09, OnePlus CPH2399](test-runs/2026-09-09-oneplus-cph2399.md):
 
-| # | Question | Detected by |
+| # | Question | Status |
 |---|---|---|
-| H1 | Does A2DP survive unchanged while an `AudioSource.MIC` stream is active, on every test device? | Scenario A + `getRoutedDevice()` assertions |
-| H2 | Does LE Audio switch to a bidirectional context and engage the earbud mic? | Scenario A on LE Audio hardware |
-| H3 | Real end-to-end latency per headphone class | Clap test, Scenarios A and B |
-| H4 | Does `MIC` processing gate away quiet room sound where `UNPROCESSED` does not? | A/B toggle in a real quiet room |
-| H5 | Does the service survive hours with the screen locked, on each OEM? | Scenarios C and G |
-| H6 | Actual battery drain per hour | Scenario G with `batterystats` |
-| H7 | How much clock drift accumulates, and in which direction? | Scenario G with underrun and lag counters |
-| H8 | Does `isClientSilenced()` actually fire when a call or assistant takes the microphone, and how fast? *(mechanism now verified — only the timing and reliability remain)* | Scenario F, cellular **and** VoIP |
+| H1 | Does A2DP survive unchanged while an `AudioSource.MIC` stream is active? | **Yes**, on one device: `in=BUILTIN_MIC out=BLUETOOTH_A2DP`, no SCO, 48 kHz preserved. `BLUETOOTH_SCO` was offered in the device list and correctly declined |
+| H2 | Does LE Audio switch to a bidirectional context and engage the earbud mic? | **Not run** — no LE Audio hardware, and this device reports LE Audio unavailable |
+| H3 | Real end-to-end latency per headphone class | **Partly.** Subjectively "noticeably delayed but usable"; no numeric figure yet. Found and removed ~215 ms of self-inflicted buffering ([ADR-0009](adr/0009-buffer-sizing-measured.md)); re-test pending |
+| H4 | Does `MIC` processing gate away quiet room sound? | **No**, on this device — room tone and small sounds audible, no gating, no obvious AGC pumping. Note `UNPROCESSED` is **unsupported** here, so there was no fallback had it failed |
+| H5 | Does the service survive hours with the screen locked, on each OEM? | Not run — needs the Phase 3 foreground service |
+| H6 | Actual battery drain per hour | Not run — Scenario G |
+| H7 | How much clock drift accumulates, and in which direction? | **Encouraging at 27 s**: frames in == frames out exactly, no correction needed. Says nothing about hours |
+| H8 | Does `isClientSilenced()` actually fire when a call or assistant takes the microphone, and how fast? *(mechanism verified from documentation — timing and reliability remain)* | Not run — Scenario F, cellular **and** VoIP |
+
+**H4 is the most valuable result so far**, because it is the hypothesis that could have made the
+product pointless regardless of engineering quality — and on the only device available there was no
+`UNPROCESSED` fallback if it had gone the other way.
 
 **The emulator cannot answer any of these** — it has no Bluetooth audio. All of it is
 physical-device work.

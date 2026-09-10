@@ -25,16 +25,34 @@ plays it out to the headphones.
 
 ## Status
 
-**Pre-implementation.** This repository currently contains planning documents only — no application
-code and no Gradle project yet. The product brief has been turned into a feasibility assessment,
-architecture decisions, a scoped MVP, a prototype plan, a test matrix, and a ranked risk list.
+**The core use case is proven on hardware.** Phase 2's prototype was run on a OnePlus CPH2399
+(Android 14) with real Bluetooth earbuds, and the answer to the question the project rests on is
+yes: the phone's built-in microphone was clearly audible in the earbud from another room, routed
+`BUILTIN_MIC → BLUETOOTH_A2DP` with no SCO anywhere.
+See the [test run](docs/test-runs/2026-09-09-oneplus-cph2399.md).
 
-- **Stack (decided):** native Kotlin + Jetpack Compose. See [ADR-0001](docs/adr/0001-native-kotlin-over-react-native.md).
-- **Platform (decided):** `minSdk` 29 (Android 10), `targetSdk` 36. See [ADR-0002](docs/adr/0002-min-and-target-sdk.md).
-- **Next step:** Phase 2 of the [implementation plan](docs/implementation-plan.md) — a throwaway
-  prototype whose only job is to answer *"can I hear the room through my earbud?"*
+This is a working prototype, **not yet a product**: there is no foreground service, so monitoring
+stops when the app is backgrounded.
 
-**Build:** not yet.
+- **Stack:** native Kotlin + Jetpack Compose ([ADR-0001](docs/adr/0001-native-kotlin-over-react-native.md))
+- **Platform:** `minSdk` 29 (Android 10), `targetSdk` 36 ([ADR-0002](docs/adr/0002-min-and-target-sdk.md))
+- **Next step:** Phase 3 of the [implementation plan](docs/implementation-plan.md) — move the
+  pipeline into a `microphone` foreground service so it survives backgrounding and screen lock
+
+## Build
+
+Requires JDK 17+ and the Android SDK (Platform 36, Build-Tools 36.0.0). No admin rights are needed
+to install either — see [dev-setup.md](docs/dev-setup.md).
+
+```bash
+./gradlew :app:installDebug
+adb shell am start -n com.yputria.remoteear/.MainActivity
+adb logcat -s RemoteEar:V          # routing, buffer sizes, counters
+bash tools/check-invariants.sh     # enforces ADR-0004 and ADR-0007
+```
+
+There is no emulator target. The emulator has no Bluetooth audio and can verify none of the things
+this project is uncertain about.
 
 ## Documentation
 

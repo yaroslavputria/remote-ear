@@ -62,14 +62,30 @@ val frameBytes = 1920                       // 20 ms mono 16-bit @ 48 kHz
 val minRecord  = AudioRecord.getMinBufferSize(48_000, CHANNEL_IN_MONO, ENCODING_PCM_16BIT)
 val minTrack   = AudioTrack.getMinBufferSize(48_000, CHANNEL_OUT_MONO, ENCODING_PCM_16BIT)
 
-val recordBufferBytes = maxOf(minRecord * 2, frameBytes * 4)
-val trackBufferBytes  = maxOf(minTrack  * 2, frameBytes * 4)
+val recordBufferBytes = maxOf(minRecord * 2, frameBytes * 4)   // ~80 ms
+val trackBufferBytes  = maxOf(minTrack,      frameBytes * 4)   // ~215 ms on A2DP
 ```
 
-Rationale: `getMinBufferSize` is the smallest buffer that *can* work, not one that works reliably
-under scheduler pressure. Doubling it costs ~20–40 ms of latency against a budget dominated by a
-100–250 ms earbud jitter buffer ([feasibility Q4](feasibility.md)) — an invisible cost for a real
-reduction in glitching. Both values must be checked against `ERROR_BAD_VALUE`.
+**The asymmetry is deliberate — do not "tidy" it into symmetry.** It is the correction in
+[ADR-0009](adr/0009-buffer-sizing-measured.md), made after measuring on hardware.
+
+On the **capture** side, `getMinBufferSize` really is the smallest buffer that *can* work rather than
+one that works reliably under scheduler pressure, and doubling it costs ~40 ms — cheap insurance.
+
+On the **A2DP output** side the reasoning inverts. Measured on a real route, `minTrack` came back as
+**20 622 bytes ≈ 215 ms**: the platform has already budgeted generously for the Bluetooth link.
+Doubling that bought no additional glitch resistance and added another ~215 ms of latency — which
+was, until it was found, the single largest app-side contributor to end-to-end delay.
+
+Two consequences worth remembering:
+
+- **`minTrack` is route-dependent.** A speaker or wired route reports a far smaller minimum, so the
+  same expression yields a much smaller buffer there. That is correct, but it means the buffer size
+  must be **logged every session** rather than assumed constant.
+- Both values must still be checked against `ERROR_BAD_VALUE`.
+- Output underrun risk is now the platform's judgement rather than ours, and that is *(unverified)*
+  over long runs. Scenario G must watch `getUnderrunCount()`; if underruns appear the answer is a
+  modest 1.25–1.5× multiplier, not a return to 2×.
 
 ## The monitor thread
 

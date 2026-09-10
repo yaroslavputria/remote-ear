@@ -70,17 +70,25 @@ no tests. Deliberately disposable code whose only job is to answer one question.
   a genuinely quiet room ([H4](feasibility.md)).
 - Clap test for latency ([H3](feasibility.md)).
 
-**Gate (project go/no-go):**
+**Gate (project go/no-go): PASSED 2026-09-09** —
+[test run](test-runs/2026-09-09-oneplus-cph2399.md), OnePlus CPH2399 / Android 14.
 
-1. Standing in another room, the phone's microphone is clearly audible in the earbud.
-2. `routedDevice` is `TYPE_BUILTIN_MIC` in and `TYPE_BLUETOOTH_A2DP`/`TYPE_BLE_HEADSET` out —
-   **never** `TYPE_BLUETOOTH_SCO`.
-3. Measured latency is within the 180–400 ms budget.
-4. A quiet room is audible as a quiet room, not gated to digital silence.
+| | Condition | Result |
+|---|---|---|
+| 1 | Standing in another room, the phone's microphone is clearly audible in the earbud | **pass** |
+| 2 | `routedDevice` is `TYPE_BUILTIN_MIC` in and A2DP/BLE out — never `TYPE_BLUETOOTH_SCO` | **pass** — and `BLUETOOTH_SCO` was offered in the device list and correctly declined |
+| 3 | Measured latency within the 180–400 ms budget | **failed as budgeted** — subjectively "noticeably delayed but usable"; cause found and fixed, budget corrected, re-test pending |
+| 4 | A quiet room is audible as a quiet room, not gated to digital silence | **pass** — the most valuable result, see [risk R2](risks.md) |
 
-*If gate 2 fails, ADR-0004 needs revisiting before anything else happens. If gate 4 fails on every
-input source, that is [risk R2](risks.md) landing, and the product needs rethinking rather than
-more code.*
+> **The answer to the question the whole project rests on is yes.** Gate 3 is the exception, and it
+> failed in an informative way: the log showed the platform's minimum `AudioTrack` buffer on A2DP is
+> already ~215 ms, and [ADR-0006](adr/0006-audio-format-and-buffering.md)'s 2× rule had doubled it.
+> Removing that recovered ~215 ms — more than Oboe was estimated to offer
+> ([ADR-0009](adr/0009-buffer-sizing-measured.md) supersedes ADR-0006). The corrected budget is
+> ~435–605 ms.
+>
+> Also learned, for Phase 6: **do not read counters from logcat.** ColorOS is chatty enough to rotate
+> them out of the ring buffer within a minute. Read them from the app.
 
 ## Phase 3 — Move the pipeline into a foreground service
 
@@ -178,8 +186,8 @@ they are.
 ```text
  0  docs ............................ committed                   [done]
  1  verify platform docs ............ no unverified claims        [done]
- 2  throwaway prototype ............. HEAR THE ROOM               [GO / NO-GO]  <-- next
- 3  foreground service .............. scenarios C, D
+ 2  throwaway prototype ............. HEAR THE ROOM               [PASSED]
+ 3  foreground service .............. scenarios C, D            <-- next
  4  Compose UI ...................... all states reachable
  5  robustness ...................... scenarios E, F
  6  long run + battery .............. scenario G                  [GO / NO-GO]

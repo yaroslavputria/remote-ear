@@ -55,6 +55,16 @@ still disposable, and evaluated in a genuinely quiet room rather than an office.
 materially better, S3 promotes to a must-have and software gain (S4) comes with it, since
 `UNPROCESSED` is quieter.
 
+> **First hardware result (2026-09-09, OnePlus CPH2399): not landing.** Room tone and small sounds
+> were audible on `MIC`, with no gating and no obvious AGC pumping.
+>
+> Two caveats keep this risk open rather than closed. It is **one device**, and this is a
+> per-OEM-tuning risk, so it says nothing about Samsung or Xiaomi. And that device reports
+> `PROPERTY_SUPPORT_AUDIO_SOURCE_UNPROCESSED = false` — so **the planned mitigation was unavailable
+> anyway**. Had `MIC` gated the room, there would have been nothing to switch to. That is worth
+> knowing: on any device lacking `UNPROCESSED`, this risk has no engineering answer, only software
+> gain and honest expectation-setting.
+
 ## R3 — Play Store friction {#r3}
 
 **Medium probability, high impact.** A continuously-listening app with a microphone-type foreground
@@ -100,10 +110,20 @@ coarse frame drop/pad correction at a threshold. No resampler unless measurement
 some earbuds have large receive buffers. Latency beyond ~500 ms starts to feel disconnected, though
 for the baby-monitor use case it remains usable.
 
-**Mitigation.** Nothing in the app can fix it; the term lives in the headphones. Measure per
+**Mitigation.** Nothing in the app can fix the link term; it lives in the headphones. Measure per
 headphone class, and if latency is a real complaint, document which codecs behave. Oboe/AAudio is
 *not* the answer ([ADR-0003](adr/0003-audiorecord-audiotrack-for-mvp.md)) — it addresses the small
 terms, not the large one.
+
+> **Partly landed on first measurement, and partly our own fault.** The tester called it "noticeably
+> delayed but usable". The largest single contributor turned out to be *self-inflicted*: the output
+> buffer was sized at 2 × the platform minimum, which on an A2DP route means ~430 ms instead of
+> ~215 ms ([ADR-0009](adr/0009-buffer-sizing-measured.md)). Removing that recovered ~215 ms — more
+> than Oboe was ever estimated to offer.
+>
+> The revised budget is **~435–605 ms**, not 180–400 ms, because the platform's A2DP buffer minimum
+> (~215 ms) is itself a floor we cannot go below. So the brief's "a few hundred milliseconds is
+> acceptable" is now *borderline* rather than comfortable. Still *(measure)* — no clap test yet.
 
 ## R7 — Microphone preempted {#r7}
 
