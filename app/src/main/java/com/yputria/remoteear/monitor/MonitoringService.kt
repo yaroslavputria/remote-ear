@@ -9,6 +9,7 @@ import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.os.Build
 import android.os.IBinder
+import android.os.SystemClock
 import android.util.Log
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.ServiceCompat
@@ -24,6 +25,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.Executors
+import kotlin.math.max
 
 /**
  * Hosts monitoring for as long as the user wants it, surviving the app being backgrounded and the
@@ -90,6 +92,24 @@ class MonitoringService : Service() {
     /** Ticks since the last periodic summary. See [tick]. */
     private var summaryTicks = 0
 
+    // ── Session totals, carried across pipeline restarts ─────────────────────────────────────────
+    //
+    // The pipeline's counters start from zero every time the streams reopen, and an automatic
+    // resume reopens them. That was fine while a `logcat` stream was capturing every minute, and
+    // wrong for the test that matters most: Scenario G's unplugged run has no `adb` attached, so its
+    // whole evidence is one snapshot read off the screen in the morning. A call at 3 a.m. would
+    // have silently reset that snapshot to "listening for four minutes, nothing to report".
+    //
+    // Found by a real call landing in the middle of the first run.
+    private var sessionStartedAt = 0L
+    private val pauses = mutableMapOf<PauseReason, Int>()
+    private var carriedUnderruns = 0
+    private var carriedDrops = 0L
+    private var carriedPads = 0L
+    private var carriedMaxRead = 0L
+    private var carriedMaxWrite = 0L
+    private var carriedPeakBacklog = 0L
+
     /**
      * Headphones appearing and disappearing.
      *
@@ -149,9 +169,46 @@ class MonitoringService : Service() {
         }
     }
 
+    /**
+     * Takes the pipeline's counters before its streams are closed, so a restart does not erase
+     * them. Must be called *before* `pipeline.stop()`: afterwards `underrunCount` reads 0 because
+     * the track is gone.
+     */
+    private fun carryPipelineTotals() {
+        carriedUnderruns += pipeline.underrunCount
+        carriedDrops += pipeline.droppedFrames
+        carriedPads += pipeline.paddedFrames
+        carriedMaxRead = max(carriedMaxRead, pipeline.maxReadNanos)
+        carriedMaxWrite = max(carriedMaxWrite, pipeline.maxWriteNanos)
+        carriedPeakBacklog = max(carriedPeakBacklog, pipeline.peakBacklogFrames)
+    }
+
+    /**
+     * The whole session, not just the current streams - the line that has to stand on its own when
+     * it is read off a screen hours later with no log to check it against.
+     */
+    private fun sessionLine(): String {
+        val minutes = (SystemClock.elapsedRealtime() - sessionStartedAt) / 60_000.0
+        val interruptions = if (pauses.isEmpty()) {
+            "none"
+        } else {
+            pauses.entries.joinToString(",") { "${it.key}:${it.value}" }
+        }
+        return "SESSION %.1fmin interruptions=%s underruns=%d corrections=drop:%d,pad:%d ".format(
+            minutes,
+            interruptions,
+            carriedUnderruns + pipeline.underrunCount,
+            carriedDrops + pipeline.droppedFrames,
+            carriedPads + pipeline.paddedFrames,
+        ) +
+            "maxRead=${max(carriedMaxRead, pipeline.maxReadNanos) / 1000}us " +
+            "maxWrite=${max(carriedMaxWrite, pipeline.maxWriteNanos) / 1000}us " +
+            "peakBacklog=${max(carriedPeakBacklog, pipeline.peakBacklogFrames) * 1000 / 48_000}ms"
+    }
+
     private fun tick() {
         if (pipeline.isRunning) {
-            val line = pipeline.statsLine()
+            val line = pipeline.statsLine() + " | " + sessionLine()
             _stats.value = line
 
             // S2: a periodic summary, never per frame.
@@ -252,6 +309,10 @@ class MonitoringService : Service() {
 
         // Promote first, then open the streams. The notification must exist before we hold the
         // microphone, and startForeground has a few seconds' deadline.
+        if (sessionStartedAt == 0L) {
+            sessionStartedAt = SystemClock.elapsedRealtime()
+            pauses.clear()
+        }
         setState(MonitorState.Starting)
         try {
             ServiceCompat.startForeground(
@@ -370,7 +431,9 @@ class MonitoringService : Service() {
 
         (current as? MonitorState.Monitoring)?.let { lastMonitoring = it }
 
+        pauses[reason] = (pauses[reason] ?: 0) + 1
         if (reason != PauseReason.MicPreempted) {
+            carryPipelineTotals()
             pipeline.stop()
             focus.abandon()
         }
@@ -406,8 +469,13 @@ class MonitoringService : Service() {
     }
 
     private fun handleStop() {
+        // The last chance to log the session totals: after this the service is gone and with it
+        // every number, and a stop is exactly when someone wants to know how the run went.
+        if (sessionStartedAt != 0L && pipeline.isRunning) Log.i(LOG_TAG, "FINAL " + sessionLine())
+        carryPipelineTotals()
         pipeline.stop()
         focus.abandon()
+        sessionStartedAt = 0L
         setState(MonitorState.Idle)
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
         stopSelf()

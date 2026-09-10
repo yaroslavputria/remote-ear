@@ -225,8 +225,14 @@ since ColorOS rotates our lines out of the ring buffer within a minute.
 | Hypotheses | [H7](feasibility.md) | [H5, H6](feasibility.md) |
 
 Run 2 needs no `adb` on purpose: the counters are cumulative and peak-tracking precisely so that a
-**snapshot at the end is still meaningful**. What it loses is *when* — steady growth versus one
-jump — which is what Run 1 is for.
+**snapshot at the end is still meaningful**. What it loses is *when* — steady growth versus one jump
+— which is what Run 1 is for.
+
+That property nearly did not hold. A real call during Run 1 revealed that the pipeline counters
+reset on every automatic resume, which would have made the morning snapshot describe only the
+minutes since the last interruption. The service now carries session totals across restarts and
+reports the number of interruptions, because a snapshot that cannot say "this run was not
+continuous" is worse than no snapshot.
 
 **Gate (second go/no-go):** several hours of continuous monitoring with no audible degradation, no
 crash, no silent stop, and a battery figure that makes the product usable overnight. Answers

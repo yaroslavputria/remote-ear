@@ -87,6 +87,50 @@ the buffers on the assumption that the A2DP output would be the constraint — i
 by far — but in practice the output drains comfortably and the loop is paced by waiting for the
 microphone. Not a defect, and it does change where to look first when latency needs reducing.
 
+## What Run 1 actually collected, and the gap it exposed
+
+The run was not the uninterrupted stretch intended, and that turned out to be more useful than one
+would have been.
+
+```text
+15:33:24  Monitoring                                   <- start
+15:49:58  focus lost: audio mode=0 -> AudioFocusLost   <- a real incoming call
+15:49:59  monitor stopped: framesIn=47685120 framesOut=47685120
+15:49:59  Paused(AudioFocusLost) -> Paused(Call)        <- reason corrected in 37 ms
+15:52:04  Monitoring                                   <- resumed by itself after the call
+```
+
+**16 minutes 34 seconds unbroken: 47,685,120 frames in, 47,685,120 out.** Zero underruns, zero
+corrections, peak backlog flat at 80 ms. Then a genuine phone call, handled correctly — which also
+served as the [Phase 5 re-test](2026-09-10-oneplus-cph2399-phase5.md).
+
+**Worst stall so far: 121 ms**, in the session after the call (read max 121,426 µs). That is now
+comfortably *past* the 80 ms record buffer, which sharpens the concern below rather than settling
+it.
+
+### The counters reset on every automatic resume — fixed
+
+The call exposed a real instrumentation defect. The pipeline's counters start from zero each time the
+streams reopen, and an automatic resume reopens them: after the call, `t=` restarted at 1.5 min and
+every maximum, underrun and correction count went back to zero.
+
+That was harmless while a `logcat` stream was capturing every minute. It would have **quietly
+invalidated Run 2**, whose entire evidence is one snapshot read off the screen in the morning: a call
+at 3 a.m. would have turned "eight hours, here are the numbers" into "listening for four minutes,
+nothing to report" — and nothing on screen would have said so.
+
+The service now keeps session totals across pipeline restarts and reports a second line:
+
+```text
+SESSION 42.3min interruptions=Call:1 underruns=0 corrections=drop:0,pad:0
+        maxRead=121426us maxWrite=86108us peakBacklog=80ms
+```
+
+`interruptions` is the important field: it is the only thing that can tell you, hours later, that
+the run was not continuous. It is also logged once as `FINAL …` when the user presses Stop.
+
+**Run 1 needs restarting** on the fixed build; the phone locked itself before that could happen.
+
 ## Not answered yet
 
 - **Everything the scenario actually exists for**: hours, not minutes. No claim about hour four can
@@ -102,7 +146,9 @@ microphone. Not a defect, and it does change where to look first when latency ne
 1. Note the battery percentage. Unplug.
 2. Tap **Listen**, screen off, leave the phone alone for as long as you can — overnight is the real
    test.
-3. In the morning: **before touching anything**, read the screen. Three outcomes worth
+3. In the morning: **before touching anything**, read the screen. Long-press the wordmark and
+   photograph **both** counter lines - the `SESSION` line is the one that proves how long the run
+   actually was and whether anything interrupted it. Three outcomes worth
    distinguishing:
    - **`Listening`** — it survived. Long-press the wordmark to reveal Diagnostics and photograph the
      counters line: elapsed, underruns, corrections, peak backlog, max block times.

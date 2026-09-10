@@ -608,7 +608,7 @@ class AudioPipeline(
         trackBytes: Int,
         inputSource: InputSource,
     ) {
-        Log.i(LOG_TAG, "--- RemoteEar Phase 2 prototype: environment ---")
+        Log.i(LOG_TAG, "--- RemoteEar: audio environment ---")
         Log.i(LOG_TAG, "device=${Build.MANUFACTURER} ${Build.MODEL} api=${Build.VERSION.SDK_INT}")
         Log.i(LOG_TAG, "UNPROCESSED supported=${audioManager.supportsUnprocessed()} using=${inputSource.label}")
         Log.i(LOG_TAG, "output sample rate property=${audioManager.getProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE)}")

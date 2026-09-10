@@ -97,7 +97,25 @@ deliberately excluded from the upgrade: no headphones is the blocker that needs 
 outlives the call. The audio mode is now logged alongside the focus loss, so if this decision is
 ever wrong again it is visible in a bug report instead of needing to be inferred.
 
-**Still to re-test:** one more call, to confirm the label reads *"A phone call is in progress."*
+### Verified fixed, 15:49 — caught in the act
+
+A second real call landed during the Scenario G run, with our own log streaming this time:
+
+```text
+15:49:58.552  focus lost: audio mode=0 -> AudioFocusLost   <- mode 0 = MODE_NORMAL, as diagnosed
+15:49:59.446  state -> Paused(reason=AudioFocusLost)        <- the wrong label, briefly
+15:49:59.483  state -> Paused(reason=Call)                  <- corrected 37 ms later
+15:52:03.986  attempting to resume from Paused(reason=Call)
+15:52:04.128  state -> Monitoring(inputSource=Mic, routedInType=15, routedOutType=8)
+```
+
+**Pass.** The user confirmed the screen read *"A phone call is in progress."* Three things this
+shows that the earlier reconstruction could not:
+
+- `audio mode=0` at the moment of the focus loss — the 437 ms lag is now logged directly by the app
+  rather than inferred from `dumpsys`.
+- The wrong label existed for **37 ms**, faster than the "within a second" the fix promised.
+- The routing assertion held through the automatic resume: `BUILTIN_MIC` → `BLUETOOTH_A2DP`.
 
 ## Not run — and these are gaps, not passes
 
