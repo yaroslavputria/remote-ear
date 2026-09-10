@@ -23,38 +23,69 @@ ring buffer within a minute.
 The counters are cumulative and peak-tracking precisely so Run 2 still yields evidence from a single
 snapshot at the end. What it cannot show is *when* — steady growth versus one jump.
 
-## Run 1 — first two minutes
+## Run 1 — first nine minutes
 
 ```text
-15:34:25  SUMMARY t=1.0min frames in=2884800 out=2884800 drift=0 underruns=0
-          read=18982/78572us write=1011/79045us corrections=drop:0,pad:0 peakBacklog=40ms
-15:35:25  SUMMARY t=2.0min frames in=5781120 out=5781120 drift=0 underruns=0
-          read=18616/78572us write=1368/79045us corrections=drop:0,pad:0 peakBacklog=40ms
+t=1.0min  in=2884800   out=2884800   underruns=0  read=18982/78572us  write=1011/79045us  drop:0,pad:0  peakBacklog=40ms
+t=2.0min  in=5781120   out=5781120   underruns=0  read=18616/78572us  write=1368/79045us  drop:0,pad:0  peakBacklog=40ms
+t=3.0min  in=8676480   out=8676480   underruns=0  read=18131/78572us  write=1848/80165us  drop:0,pad:0  peakBacklog=60ms
+t=4.0min  in=11571840  out=11571840  underruns=0  read=17454/81847us  write=2524/86217us  drop:0,pad:0  peakBacklog=80ms
+t=5.0min  in=14467200  out=14467200  underruns=0  read=16692/81847us  write=3286/86217us  drop:0,pad:0  peakBacklog=80ms
+t=6.0min  in=17360640  out=17360640  underruns=0  read=16729/85321us  write=3250/86217us  drop:0,pad:0  peakBacklog=80ms
+t=7.0min  in=20252160  out=20252160  underruns=0  read=17022/85321us  write=2956/87004us  drop:0,pad:0  peakBacklog=80ms
+t=8.0min  in=23143680  out=23143680  underruns=0  read=17214/85321us  write=2764/87004us  drop:0,pad:0  peakBacklog=80ms
+t=9.0min  in=26036160  out=26036160  underruns=0  read=17333/85321us  write=2643/88887us  drop:0,pad:0  peakBacklog=80ms
 ```
+
+**The backlog rose 40 → 80 ms over four minutes and then went flat for five.** Because it is a
+high-water mark, a flat peak means the current value has not exceeded 80 ms since — so this was the
+pipeline *settling*, not drift accumulating. Real drift would keep pushing the peak up.
+
+So after nine minutes and 26 million frames: **no underrun, no correction needed, and no frame
+either lost or invented.** The drift correction has not had to do anything, which is the best
+possible outcome for it — and it has not misfired either, which was the risk in adding it.
+
+The read and write means also settled, and they settled the *opposite way round* to expectation.
 
 | Reading | Value | Reading it |
 |---|---|---|
-| Underruns | **0** | The output has not starved |
-| Drift corrections | **0 drops, 0 pads** | Nothing to correct yet, and — more usefully — **no false positives**: the drop threshold is not tripping on ordinary jitter |
-| Peak backlog | **40 ms, unchanged** | Two frames, the expected steady state, and well under the 100 ms drop threshold. Flat over two minutes means the input is not backing up |
-| `framesIn == framesOut` | exactly | No frames lost, none invented |
-| Mean read block | ~19 ms | **The read is what paces the loop**, not the write — the opposite of the assumption behind the buffer sizing in [ADR-0009](../adr/0009-buffer-sizing-measured.md), and worth noting |
-| Mean write block | 1.0–1.4 ms | The 215 ms A2DP track buffer is never close to full |
-| **Max read / max write** | **78.6 ms / 79.0 ms** | **The one thing to watch.** See below |
+| Underruns | **0** | The output has not starved once |
+| Drift corrections | **0 drops, 0 pads** | Nothing needed correcting, and — just as usefully — **no false positives**: the drop threshold does not trip on ordinary jitter |
+| Peak backlog | **80 ms, flat for five minutes** | Settled, not growing. Under the 100 ms drop threshold with room to spare |
+| `framesIn == framesOut` | exactly, at 26 million | No frames lost, none invented |
+| Mean read block | ~17 ms, falling slightly | **The read paces the loop** — see below |
+| Mean write block | 1.0 → 3.3 → 2.6 ms | The 215 ms A2DP track buffer never comes close to full |
+| **Max read / max write** | **85.3 ms / 88.9 ms**, creeping up | **The one thing to watch.** See below |
 | CPU | 16.6 % of one core | ~2 % of an eight-core phone |
 | Memory | 81 MB PSS / 187 MB RSS | Ordinary for a Compose app; flat so far |
 | Thermal status | `mStatus=0` on every sensor | No throttling. Battery 31.2 → 33.5 °C, but it is **charging at 100 %**, so that rise is not ours to claim |
 
-### The 79 ms stall
+### The stalls — the open risk
 
-Both maxima are ~79 ms and **both stopped changing before the first minute elapsed** — so this was a
-single event, almost certainly during start-up, that stalled a read and the write after it. It has
-not recurred in the minutes since.
+The maxima are not a single start-up event. They creep: read 78.6 → 81.8 → 85.3 ms, write 79.0 →
+86.2 → 87.0 → 88.9 ms, a new worst case every couple of minutes.
 
-It matters because 78 ms is most of the **80 ms record buffer** ([ADR-0009](../adr/0009-buffer-sizing-measured.md)):
-a stall of that length while the buffer is already full is exactly how a frame gets lost. One at
-start-up is harmless. **A pattern of them during the run is a defect**, which is why the maxima are
-tracked at all — a mean over 700,000 frames would have hidden it completely.
+That matters because **the record buffer is 80 ms** ([ADR-0009](../adr/0009-buffer-sizing-measured.md)),
+and a stall longer than the buffer is exactly how a captured frame is lost. And frame loss of that
+kind **would not show in these counters**: `framesIn` counts what we read, so if the platform drops
+a buffer before we get to it, the number stays consistent and the evidence is an audible click
+instead.
+
+So the honest position after nine minutes: the numbers are clean, and the numbers cannot rule this
+one out. **This is the specific thing a human ear at hour four is for.** It is also the argument for
+tracking maxima at all, now concrete: a mean over 26 million frames shows 17 ms and hides an 89 ms
+stall completely.
+
+If clicks do turn up, the fix is not mysterious — the record buffer was set to
+`max(minRecord * 2, 4 frames)` ≈ 80 ms in ADR-0009, and raising it costs input latency in a budget
+that A2DP already dominates with 215 ms on the output side.
+
+### The read paces the loop, not the write
+
+Reads block ~17 ms; writes return in 1–3 ms. [ADR-0009](../adr/0009-buffer-sizing-measured.md) sized
+the buffers on the assumption that the A2DP output would be the constraint — it is the larger buffer
+by far — but in practice the output drains comfortably and the loop is paced by waiting for the
+microphone. Not a defect, and it does change where to look first when latency needs reducing.
 
 ## Not answered yet
 
