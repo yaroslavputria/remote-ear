@@ -18,6 +18,7 @@ import com.yputria.remoteear.monitor.MonitorState
 import com.yputria.remoteear.monitor.MonitoringService
 import com.yputria.remoteear.monitor.PauseReason
 import com.yputria.remoteear.monitor.deviceTypeName
+import com.yputria.remoteear.monitor.headphoneName
 import com.yputria.remoteear.monitor.streamMusicFraction
 import com.yputria.remoteear.monitor.supportsUnprocessed
 import com.yputria.remoteear.monitor.usableBluetoothSinks
@@ -85,8 +86,10 @@ class MonitorViewModel(app: Application) : AndroidViewModel(app) {
         ContextCompat.checkSelfPermission(getApplication(), Manifest.permission.RECORD_AUDIO) ==
             PackageManager.PERMISSION_GRANTED
 
-    private fun currentSinks(): List<String> =
-        audioManager.usableBluetoothSinks().map { deviceTypeName(it.type) }
+    // The headphones name, when the platform offers one. Kept as a list so "is anything connected"
+    // and "what is it called" come from the same read.
+    private fun currentSinks(): List<Sink> =
+        audioManager.usableBluetoothSinks().map { Sink(it.headphoneName(), deviceTypeName(it.type)) }
 
     /** Permission and volume can change while the Activity is stopped, so re-read them on resume. */
     fun refresh() {
@@ -118,9 +121,12 @@ class MonitorViewModel(app: Application) : AndroidViewModel(app) {
         val noise: Float,
     )
 
+    /** [name] is null when the platform will not give one; [type] is for diagnostics only. */
+    data class Sink(val name: String?, val type: String)
+
     private data class Local(
         val micGranted: Boolean,
-        val sinks: List<String>,
+        val sinks: List<Sink>,
         val volume: Float,
         val inputSource: InputSource,
     )
@@ -173,7 +179,7 @@ class MonitorViewModel(app: Application) : AndroidViewModel(app) {
             pauseReason == PauseReason.BluetoothGone -> HeadphoneStatus.Disconnected
             pauseReason == PauseReason.AudioFocusLost -> HeadphoneStatus.BusyElsewhere
             local.sinks.isEmpty() -> HeadphoneStatus.None
-            else -> HeadphoneStatus.Connected(local.sinks.first())
+            else -> HeadphoneStatus.Connected(local.sinks.first().name)
         }
 
         val monitoring = state as? MonitorState.Monitoring

@@ -67,6 +67,7 @@
     <string name="status_mic_in_use">In use by RemoteEar</string>
     <string name="status_mic_call">Used by the call</string>
     <string name="status_mic_other_app">Used by another app</string>
+    <string name="status_headphones_generic">Bluetooth headphones</string>
     <string name="status_headphones_none">None connected</string>
     <string name="status_headphones_disconnected">Disconnected</string>
     <string name="status_headphones_busy">Busy with another app</string>
@@ -97,6 +98,18 @@
     <string name="diagnostics_input_unprocessed">UNPROCESSED</string>
     <string name="diagnostics_unprocessed_unsupported">UNPROCESSED is not supported on this phone.</string>
     <string name="diagnostics_routing">Routing · in %1$s · out %2$s</string>
+
+    <!-- The overflow menu, and the documents behind it. There is no settings screen: every setting
+         this app could have is either the phone's business or already on the main screen. -->
+    <string name="menu_privacy">Privacy policy</string>
+    <string name="menu_terms">Terms of use</string>
+    <string name="menu_about">About</string>
+    <string name="cd_more">More</string>
+    <string name="cd_back">Back</string>
+    <string name="about_tagline">The phone\'s microphone, live in your headphones. Nothing else — no recording, no network, no account.</string>
+    <string name="about_version">Version %1$s</string>
+    <string name="about_no_internet">RemoteEar does not request the internet permission, so audio cannot leave this phone even in principle.</string>
+    <string name="about_licence">Open source under the MIT licence.</string>
 
     <!-- Notification. The title carries the reason, because a collapsed notification often shows
          the title alone. -->

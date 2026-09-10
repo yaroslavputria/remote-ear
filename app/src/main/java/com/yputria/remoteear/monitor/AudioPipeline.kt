@@ -98,6 +98,31 @@ fun AudioManager.usableBluetoothSinks(): List<AudioDeviceInfo> =
             (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && it.type == AudioDeviceInfo.TYPE_BLE_HEADSET)
     }
 
+/**
+ * The headphones' own name - "Buds Pro" rather than "BLUETOOTH_A2DP" - or null if the platform will
+ * not give us one.
+ *
+ * `AudioDeviceInfo.getProductName()` is used deliberately instead of `BluetoothDevice.getName()`:
+ * the latter needs `BLUETOOTH_CONNECT`, which
+ * docs/adr/0007-minimal-permission-set.md excludes, and asking for a Bluetooth permission to render
+ * a label would be a poor trade in a microphone app. If the platform declines, the UI falls back to
+ * "Bluetooth headphones" - a name is a nicety, and the *state* is what matters.
+ *
+ * Two defences. It is wrapped in `runCatching` because whether this getter is redacted without
+ * `BLUETOOTH_CONNECT` is not something the documentation states plainly, and a label must never be
+ * able to crash a monitor. And the phone's own model is rejected: for built-in devices this getter
+ * returns the handset's marketing name, and some OEMs return it for Bluetooth devices too - showing
+ * "CPH2399" as the name of your earbuds would be worse than showing nothing.
+ */
+fun AudioDeviceInfo.headphoneName(): String? = runCatching { productName?.toString()?.trim() }
+    .getOrNull()
+    ?.takeIf {
+        it.isNotEmpty() &&
+            !it.equals(Build.MODEL, ignoreCase = true) &&
+            !it.equals(Build.DEVICE, ignoreCase = true) &&
+            !it.equals(Build.MANUFACTURER, ignoreCase = true)
+    }
+
 fun AudioManager.builtInMic(): AudioDeviceInfo? =
     getDevices(AudioManager.GET_DEVICES_INPUTS).firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_MIC }
 

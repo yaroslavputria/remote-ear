@@ -44,8 +44,12 @@ enum class MicStatus { Allowed, Denied, InUseByUs, UsedByCall, UsedByOtherApp }
 
 /** The headphone status row. Never says "connected" when audio is not flowing. */
 sealed interface HeadphoneStatus {
-    /** [label] is the device *type* - the name would need BLUETOOTH_CONNECT, which ADR-0007 excludes. */
-    data class Connected(val label: String) : HeadphoneStatus
+    /**
+     * [name] is the headphones' own name where the platform gives one, and null where it does not -
+     * in which case the row reads "Bluetooth headphones". The device *type* never appears here; it
+     * is a debug string, and `BLUETOOTH_A2DP` is not something to show a tired parent at 3 a.m.
+     */
+    data class Connected(val name: String?) : HeadphoneStatus
     data object None : HeadphoneStatus
     data object Disconnected : HeadphoneStatus
     data object BusyElsewhere : HeadphoneStatus

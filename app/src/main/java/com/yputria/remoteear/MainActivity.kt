@@ -5,16 +5,24 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yputria.remoteear.theme.LocalPalette
 import com.yputria.remoteear.theme.RemoteEarTheme
+import com.yputria.remoteear.ui.AboutScreen
+import com.yputria.remoteear.ui.DocumentScreen
+import com.yputria.remoteear.ui.MenuItem
 import com.yputria.remoteear.ui.MonitorRoute
 import com.yputria.remoteear.ui.MonitorViewModel
 
@@ -46,16 +54,31 @@ class MainActivity : ComponentActivity() {
             RemoteEarTheme {
                 val vm: MonitorViewModel = viewModel()
                 viewModel = vm
+
+                // Three documents behind an overflow menu is not enough to justify a navigation
+                // library, and CLAUDE.md keeps third-party runtime dependencies out. One nullable
+                // value plus BackHandler is the whole router.
+                var open by remember { mutableStateOf<MenuItem?>(null) }
+                BackHandler(enabled = open != null) { open = null }
+
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = LocalPalette.current.surface,
                 ) {
-                    MonitorRoute(
-                        viewModel = vm,
-                        onRequestMicPermission = {
-                            micPermission.launch(Manifest.permission.RECORD_AUDIO)
-                        },
-                    )
+                    when (val item = open) {
+                        null -> MonitorRoute(
+                            viewModel = vm,
+                            onRequestMicPermission = {
+                                micPermission.launch(Manifest.permission.RECORD_AUDIO)
+                            },
+                            onMenu = { open = it },
+                        )
+                        MenuItem.About -> AboutScreen(
+                            onBack = { open = null },
+                            onOpen = { open = it },
+                        )
+                        else -> DocumentScreen(item = item, onBack = { open = null })
+                    }
                 }
             }
         }

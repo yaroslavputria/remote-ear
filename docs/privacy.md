@@ -86,6 +86,11 @@ In the permission rationale, before the system dialog appears:
 Both sentences must remain literally true. If a future change makes either false, the change is
 wrong or the sentence must change first — and the sentence changing is a decision that needs an ADR.
 
+And in full, from the overflow menu, the **privacy policy** and **terms of use**:
+[`app/src/main/assets/legal/`](../app/src/main/assets/legal/). The app renders those exact files
+rather than a copy in `strings.xml`, so what a sceptical reader audits in this repository is
+byte-for-byte what the app displays. See [M16](mvp-scope.md).
+
 ## Play Data Safety
 
 The declaration must be accurate rather than flattering:

@@ -53,7 +53,13 @@ object MonitorCopy {
         else -> null
     }
 
-    /** What happens next, or what to do. Always present. */
+    /**
+     * What happens next, or what to do. Every state has one - the screen would read inconsistently
+     * if the one state you actually sit and look at were the only one without a line.
+     *
+     * It briefly did not: while listening, the text ended up inside a scrolling box. The cause was
+     * the diagnostics block below it, not this paragraph, and removing that reclaimed the height.
+     */
     @StringRes
     fun body(screen: Screen): Int = when (screen) {
         Screen.PermissionMissing -> R.string.permission_body

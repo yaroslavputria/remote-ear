@@ -29,6 +29,7 @@ Non-negotiable. The app is not shippable without all of these.
 | M13 | Tell the user plainly that audio is processed locally and never uploaded | Brief §12 |
 | M14 | Ship with no `INTERNET` permission | Makes M13 verifiable rather than merely stated |
 | M15 | Detect microphone silencing via `isClientSilenced()` and pause with a stated reason | *(verified)* Losing the microphone delivers **silence, not an error** — see below |
+| M16 | **Privacy policy and terms of use reachable inside the app** — *added 2026-09-10* | Play requires the privacy policy to be reachable in the app as well as the listing, and this product needs its "not a safety device" statement somewhere. See below |
 
 M12, M14 and M15 are additions to the brief's own list. M12 because a preferred device is only a
 request and the failure is inaudible-until-it-isn't; M14 because it converts the central privacy
@@ -42,6 +43,29 @@ reports "Monitoring" while relaying nothing. That is the same class of failure a
 platform provides `AudioRecord.registerAudioRecordingCallback()` +
 `AudioRecordingConfiguration.isClientSilenced()` at API 29, our `minSdk` floor, which makes it cheap
 as well as necessary.
+
+### M16 — the two documents
+
+They live at [`app/src/main/assets/legal/`](../app/src/main/assets/legal/) and are rendered in-app
+from those exact files, reachable from an overflow menu on the wordmark row. **The text is not
+copied into `strings.xml`**: the file a reader sees in this repository is the file the app displays,
+so the privacy claim on screen is byte-identical to the one anyone can audit. An app whose central
+promise is "nothing leaves this phone" should not keep three drifting copies of that sentence.
+
+The **terms** matter more than legal hygiene here. This product is left in a room with a child, and
+it can fail silently for at least six reasons outside its control — Bluetooth range, battery, OEM
+process killing, a call, another app taking the microphone, an OS update. The document says plainly
+that it is **not a baby monitor, medical device or safety device**, and that it must never be the
+only means of supervising anyone. That is not boilerplate; it is the honest counterpart to
+[risk R1](risks.md).
+
+**Still needed before publishing**, and deliberately left as visible placeholders rather than
+invented: a contact address in the privacy policy, and a jurisdiction in the terms. Play also wants
+the policy at a **public URL** in the store listing — the same file in this repository can serve as
+that. The Data Safety declaration is in [privacy.md](privacy.md).
+
+Neither document has been reviewed by a lawyer. They were written to be *accurate*, which is easy
+for the privacy policy — the honest answer is "nothing is collected" — and less so for the terms.
 
 **M10 has no app-side slider, deliberately.** Playback rides `STREAM_MUSIC`, so the phone volume
 buttons and the earbud own controls already set loudness — and the earbud is the only control the

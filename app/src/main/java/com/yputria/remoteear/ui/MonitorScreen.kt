@@ -5,6 +5,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -78,6 +79,7 @@ private const val VOLUME_SEGMENTS = 7
 fun MonitorRoute(
     viewModel: MonitorViewModel,
     onRequestMicPermission: () -> Unit,
+    onMenu: (MenuItem) -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -118,6 +120,7 @@ fun MonitorRoute(
             onNoiseReduction = viewModel::setNoiseReduction,
             onDismissNotice = viewModel::dismissUnexpectedEnd,
             onSelectInput = viewModel::selectInputSource,
+            onMenu = onMenu,
         )
     }
 }
@@ -132,9 +135,14 @@ fun MonitorScreen(
     onNoiseReduction: (Float) -> Unit = {},
     onDismissNotice: () -> Unit = {},
     onSelectInput: (InputSource) -> Unit = {},
+    onMenu: (MenuItem) -> Unit = {},
 ) {
     val palette = LocalPalette.current
     val background = if (dimmed) palette.dimSurface else palette.surface
+
+    // Off by default and reachable by long-pressing the wordmark. It is a testing affordance, not a
+    // feature, and on screen it cost height the designed layout did not have to spare.
+    var diagnosticsVisible by remember { mutableStateOf(false) }
 
     // Fixed layout rather than a scrolling page: the control belongs at the bottom, under the
     // thumb, and the state block fills what is left. Only the state block scrolls, so nothing
@@ -147,13 +155,28 @@ fun MonitorScreen(
             .padding(horizontal = 24.dp)
             .padding(top = 6.dp, bottom = 12.dp),
     ) {
-        Text(
-            text = stringResource(R.string.wordmark),
-            fontSize = 11.sp,
-            letterSpacing = 2.6.sp,
-            color = if (dimmed) palette.dimWordmark else palette.wordmark,
-            modifier = Modifier.padding(top = 6.dp),
-        )
+        // The wordmark row carries the overflow menu. It is the only horizontal space on the screen
+        // that was already there, so the documents cost no height at all - and while dimmed the
+        // menu disappears with everything else that is not state or Stop.
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.wordmark),
+                fontSize = 11.sp,
+                letterSpacing = 2.6.sp,
+                color = if (dimmed) palette.dimWordmark else palette.wordmark,
+                modifier = Modifier
+                    .weight(1f)
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onLongPress = { diagnosticsVisible = !diagnosticsVisible },
+                        )
+                    },
+            )
+            if (!dimmed) OverflowMenu(onSelect = onMenu)
+        }
 
         Box(
             modifier = Modifier
@@ -207,7 +230,7 @@ fun MonitorScreen(
             color = palette.footnote,
         )
 
-        if (state.isActive || state.counters != null) {
+        if (diagnosticsVisible) {
             Spacer(Modifier.height(12.dp))
             Diagnostics(state, onSelectInput)
         }
@@ -573,7 +596,8 @@ private fun StatusPanel(
             dot = headphoneTone,
             label = stringResource(R.string.status_headphones),
             value = when (headphones) {
-                is HeadphoneStatus.Connected -> headphones.label
+                is HeadphoneStatus.Connected ->
+                    headphones.name ?: stringResource(R.string.status_headphones_generic)
                 HeadphoneStatus.None -> stringResource(R.string.status_headphones_none)
                 HeadphoneStatus.Disconnected -> stringResource(R.string.status_headphones_disconnected)
                 HeadphoneStatus.BusyElsewhere -> stringResource(R.string.status_headphones_busy)
@@ -754,28 +778,23 @@ private fun noiseLevelLabel(level: Float): Int = when {
 // ── Diagnostics ──────────────────────────────────────────────────────────────────────────────────
 
 /**
- * Not part of the design, which rightly has no settings screen. It is here because
- * docs/test-matrix.md needs the `MIC`/`UNPROCESSED` A/B and the frame counters on a real device, and
- * those cannot be run from `adb` alone. Collapsed by default, in footnote grey, so the designed
- * screen is what a user actually sees.
+ * Not part of the design, which rightly has no settings screen.
+ *
+ * It exists because docs/test-matrix.md needs the `MIC`/`UNPROCESSED` A/B and the frame counters on
+ * a real device, and neither can be driven from `adb`. **Hidden until the wordmark is long-pressed**
+ * - on screen it took height the designed layout did not have spare, which pushed the state text
+ * into a scrolling box while listening.
  */
 @Composable
 private fun Diagnostics(state: MonitorUiState, onSelectInput: (InputSource) -> Unit) {
     val palette = LocalPalette.current
-    var expanded by remember { mutableStateOf(false) }
 
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            text = (if (expanded) "− " else "+ ") + stringResource(R.string.diagnostics),
+            text = stringResource(R.string.diagnostics),
             fontSize = 12.sp,
             color = palette.footnote,
-            modifier = Modifier
-                .clip(RoundedCornerShape(6.dp))
-                .clickable { expanded = !expanded }
-                .padding(vertical = 4.dp),
         )
-
-        if (!expanded) return@Column
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(
