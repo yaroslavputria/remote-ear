@@ -188,7 +188,7 @@ fun MonitorScreen(
             StateBlock(state.screen, dimmed)
         }
 
-        PrimaryControl(state.screen, dimmed, onListen, onStop, onAllowMic)
+        PrimaryControl(state.screen, dimmed, state.micPermanentlyDenied, onListen, onStop, onAllowMic)
 
         // Nothing below the control is drawn while dimmed. State and Stop never fade; everything
         // else does, because light in a room where someone is asleep is a cost.
@@ -429,6 +429,7 @@ private fun Screen.accentOr(palette: RemoteEarPalette, fallback: Color): Color =
 private fun PrimaryControl(
     screen: Screen,
     dimmed: Boolean,
+    permanentlyDenied: Boolean,
     onListen: () -> Unit,
     onStop: () -> Unit,
     onAllowMic: () -> Unit,
@@ -441,7 +442,13 @@ private fun PrimaryControl(
             shape = RoundedCornerShape(46.dp),
             container = palette.primary,
         ) {
-            ControlLabel(stringResource(R.string.permission_action), palette.onPrimary)
+            ControlLabel(
+                text = stringResource(
+                    if (permanentlyDenied) R.string.permission_action_settings
+                    else R.string.permission_action,
+                ),
+                color = palette.onPrimary,
+            )
         }
 
         Screen.Idle, is Screen.Stopped -> ControlSurface(

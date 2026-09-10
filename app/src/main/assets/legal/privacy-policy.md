@@ -57,7 +57,7 @@ screen. There is no copy on a server that can change without you.
 
 ## Contact
 
-[CONTACT — replace before publishing]
+yaroslav.putria@gmail.com
 
 ## Source
 

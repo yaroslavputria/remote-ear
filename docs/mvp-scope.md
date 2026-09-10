@@ -59,10 +59,13 @@ that it is **not a baby monitor, medical device or safety device**, and that it 
 only means of supervising anyone. That is not boilerplate; it is the honest counterpart to
 [risk R1](risks.md).
 
-**Still needed before publishing**, and deliberately left as visible placeholders rather than
-invented: a contact address in the privacy policy, and a jurisdiction in the terms. Play also wants
-the policy at a **public URL** in the store listing — the same file in this repository can serve as
-that. The Data Safety declaration is in [privacy.md](privacy.md).
+The contact address is filled in. **There is deliberately no governing-law clause**: naming a
+jurisdiction would be a real legal choice, it protects the author only marginally for a free app
+with no accounts and no data, and an invented one would be worse than none. Add one line if that
+changes.
+
+Play still wants the policy at a **public URL** in the store listing — the same file in this
+repository can serve as that. The Data Safety declaration is in [privacy.md](privacy.md).
 
 Neither document has been reviewed by a lawyer. They were written to be *accurate*, which is easy
 for the privacy policy — the honest answer is "nothing is collected" — and less so for the terms.

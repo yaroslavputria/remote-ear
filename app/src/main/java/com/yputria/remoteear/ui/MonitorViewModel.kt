@@ -45,6 +45,7 @@ class MonitorViewModel(app: Application) : AndroidViewModel(app) {
     private val audioManager = app.getSystemService(AudioManager::class.java)
 
     private val micGranted = MutableStateFlow(hasMicPermission())
+    private val micPermanentlyDenied = MutableStateFlow(false)
     private val sinks = MutableStateFlow(currentSinks())
     private val volume = MutableStateFlow(audioManager.streamMusicFraction())
     private val inputSource = MutableStateFlow(InputSource.Mic)
@@ -94,12 +95,19 @@ class MonitorViewModel(app: Application) : AndroidViewModel(app) {
     /** Permission and volume can change while the Activity is stopped, so re-read them on resume. */
     fun refresh() {
         micGranted.value = hasMicPermission()
+        if (micGranted.value) micPermanentlyDenied.value = false
         sinks.value = currentSinks()
         volume.value = audioManager.streamMusicFraction()
     }
 
-    fun onPermissionResult(granted: Boolean) {
+    /**
+     * [canAskAgain] is `shouldShowRequestPermissionRationale` read *after* the dialog closed. At that
+     * point false means Android has stopped asking, which is the only reliable way to detect a
+     * permanent denial without persisting a "have we asked yet" flag.
+     */
+    fun onPermissionResult(granted: Boolean, canAskAgain: Boolean) {
         micGranted.value = granted
+        micPermanentlyDenied.value = !granted && !canAskAgain
     }
 
     fun selectInputSource(source: InputSource) {
@@ -126,6 +134,7 @@ class MonitorViewModel(app: Application) : AndroidViewModel(app) {
 
     private data class Local(
         val micGranted: Boolean,
+        val micPermanentlyDenied: Boolean,
         val sinks: List<Sink>,
         val volume: Float,
         val inputSource: InputSource,
@@ -139,14 +148,14 @@ class MonitorViewModel(app: Application) : AndroidViewModel(app) {
             MonitoringService.noiseCancellation,
             ::Service,
         ),
-        combine(micGranted, sinks, volume, inputSource, ::Local),
+        combine(micGranted, micPermanentlyDenied, sinks, volume, inputSource, ::Local),
         ::build,
     ).stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = build(
             Service(MonitorState.Idle, null, false, 0f),
-            Local(hasMicPermission(), currentSinks(), volume.value, InputSource.Mic),
+            Local(hasMicPermission(), false, currentSinks(), volume.value, InputSource.Mic),
         ),
     )
 
@@ -191,6 +200,7 @@ class MonitorViewModel(app: Application) : AndroidViewModel(app) {
             volume = local.volume,
             noiseReduction = service.noise,
             endedUnexpectedly = service.endedUnexpectedly,
+            micPermanentlyDenied = local.micPermanentlyDenied,
             inputSource = local.inputSource,
             unprocessedSupported = unprocessedSupported,
             routedIn = monitoring?.let { deviceTypeName(it.routedInType) },

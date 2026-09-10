@@ -1,9 +1,12 @@
 package com.yputria.remoteear
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -41,7 +44,14 @@ class MainActivity : ComponentActivity() {
 
     private val micPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
-    ) { granted -> viewModel?.onPermissionResult(granted) }
+    ) { granted ->
+        // Read after the dialog closed: false here means Android has stopped asking, which is the
+        // only reliable signal for a permanent denial.
+        viewModel?.onPermissionResult(
+            granted = granted,
+            canAskAgain = shouldShowRequestPermissionRationale(Manifest.permission.RECORD_AUDIO),
+        )
+    }
 
     private val notificationPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -69,7 +79,14 @@ class MainActivity : ComponentActivity() {
                         null -> MonitorRoute(
                             viewModel = vm,
                             onRequestMicPermission = {
-                                micPermission.launch(Manifest.permission.RECORD_AUDIO)
+                                // Once Android has stopped asking, launching the request does
+                                // nothing at all - so the button has to go somewhere the user can
+                                // actually act, rather than sit there looking functional.
+                                if (vm.uiState.value.micPermanentlyDenied) {
+                                    openAppSettings()
+                                } else {
+                                    micPermission.launch(Manifest.permission.RECORD_AUDIO)
+                                }
                             },
                             onMenu = { open = it },
                         )
@@ -97,5 +114,14 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         viewModel?.refresh()
+    }
+
+    private fun openAppSettings() {
+        startActivity(
+            Intent(
+                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.fromParts("package", packageName, null),
+            ),
+        )
     }
 }

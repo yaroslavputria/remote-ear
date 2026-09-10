@@ -45,7 +45,3 @@ That includes any consequence of relying on it as a monitoring device.
 ## Licence
 
 MIT. The full text ships with the source code.
-
-## Governing law
-
-[JURISDICTION — replace before publishing]

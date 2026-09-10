@@ -66,6 +66,12 @@ data class MonitorUiState(
     val noiseReduction: Float,
     /** A previous session ended without the user stopping it (risks.md R1). */
     val endedUnexpectedly: Boolean,
+    /**
+     * Android will not show the microphone dialog again. Without this the "Allow microphone" button
+     * becomes literally inert - the exact dead button the Phase 4 gate forbids - so it changes into
+     * one that opens the system settings page instead.
+     */
+    val micPermanentlyDenied: Boolean = false,
     val inputSource: InputSource,
     val unprocessedSupported: Boolean,
     val routedIn: String? = null,

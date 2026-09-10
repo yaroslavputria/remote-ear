@@ -50,6 +50,7 @@
     <string name="permission_title">Microphone access needed</string>
     <string name="permission_body">RemoteEar plays this room to your headphones, live. It cannot do that without the microphone. Nothing is recorded, saved, or sent anywhere — the app has no internet access.</string>
     <string name="permission_action">Allow microphone</string>
+    <string name="permission_action_settings">Open settings</string>
     <string name="permission_footnote">If you refused before, Android will not ask again — open Settings › Apps › RemoteEar › Permissions.</string>
 
     <!-- The primary control -->
