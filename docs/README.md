@@ -73,13 +73,19 @@ routing assertion still holding through a service-hosted session
 ([test run](test-runs/2026-09-10-oneplus-cph2399-phase3.md)). Endurance is *not* established — the
 measured session was 2 m 25 s, and the multi-hour question belongs to Scenario G in Phase 6.
 
-**Phase 4 is built** — the designed UI from [design-spec.md](design-spec.md), driven by a
-ViewModel, with every state a literal in `MonitorPreviews.kt`. Its rendering has **not** been
-looked at on a device yet; the gate is only partially met.
+**Phase 4** is the designed UI from [design-spec.md](design-spec.md), driven by a ViewModel, with
+every state a literal in `MonitorPreviews.kt`. Idle, Listening and Paused have been seen rendered on
+the device and match the design; the dim state, the light theme and both `Stopped` kinds exist only
+as previews so far
+([run](test-runs/2026-09-10-oneplus-cph2399-phase4.md)).
 
-**Next: Phase 5** — the pause triggers: audio focus, calls, Bluetooth disconnect and reconnect,
-microphone preemption. This is the phase that decides whether the product can be trusted near a
-child, because every one of those events is currently untested behaviour.
+**Phase 5** wired the four interruptions. **Scenario E passes on hardware, twice** — disconnect
+pauses immediately with the reason on both surfaces, and reconnect resumes unattended in ~5 s with
+the routing assertion intact ([run](test-runs/2026-09-10-oneplus-cph2399-phase5.md)). Scenario F —
+another app taking the microphone — is **built but unexercised**, along with the call wording and
+the focus-recovery polling; all three need a person rather than `adb`.
+
+**Next: Phase 6** — the multi-hour run, drift, battery and OEM process killing.
 
 Still open on hardware: a numeric latency figure (no clap test yet), LE Audio (H2 — no hardware), an
 OEM baseline (no near-AOSP device), and all Android 15/16 behaviour (untestable on API 34). The

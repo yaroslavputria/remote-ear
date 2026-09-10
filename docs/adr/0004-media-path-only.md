@@ -89,6 +89,15 @@ codebase:**
   foreground-equivalent priority against other *ordinary* apps, which is the common case; and when a
   call is in progress we want to pause anyway. But it must be detected and reported via
   `isClientSilenced()` rather than assumed — see [risk R7](../risks.md).
+- **Reading the audio mode was never prohibited; setting it is.** *(clarified 2026-09-10, no change
+  of decision.)* The table above forbids `setMode(...)` — the call that hands the device to the
+  communication path. `getMode()` has no such effect, needs no permission, and turns out to be the
+  only way to tell a phone call from another app's music **without `READ_PHONE_STATE`**, which
+  matters because Phase 5 must name the pause reason correctly and the two cases read identically as
+  an audio-focus loss. `tools/check-invariants.sh` originally banned the constants `MODE_IN_CALL`
+  and `MODE_IN_COMMUNICATION` outright, which also banned comparing against them; the guard is now
+  on `setMode(` and on the Kotlin property assignment `.mode =`, which is strictly stronger against
+  the thing the ADR actually prohibits.
 - **Constrains LE Audio only partially.** *(unverified)* LE Audio is bidirectional by design, so a
   stack may engage the earbud microphone without the app touching anything on the prohibited list.
   This ADR cannot prevent that; the `getRoutedDevice()` assertion is what detects it. See

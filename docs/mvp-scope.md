@@ -24,7 +24,7 @@ Non-negotiable. The app is not shippable without all of these.
 | M8 | One clear Start/Stop control | Brief §4.7 |
 | M9 | Status for: microphone permission, monitoring state, Bluetooth availability, errors | Brief §4.8, exactly these four |
 | M10 | Output volume | Brief §10 — satisfied by the **phone media volume**, which the app displays rather than duplicating. See below |
-| M11 | Pause — visibly, with a stated reason — on audio focus loss, phone call, or Bluetooth loss | Brief §16. A silent stop is the worst bug this product can have |
+| M11 | Pause — visibly, with a stated reason — on audio focus loss, phone call, or Bluetooth loss | Brief §16. A silent stop is the worst bug this product can have. *Built in Phase 5; Bluetooth loss verified on hardware, the other two not yet* |
 | M12 | Assert actual routing after start and fail loudly if it is wrong | If `TYPE_BLUETOOTH_SCO` appears, the wrong microphone is live |
 | M13 | Tell the user plainly that audio is processed locally and never uploaded | Brief §12 |
 | M14 | Ship with no `INTERNET` permission | Makes M13 verifiable rather than merely stated |
@@ -85,7 +85,7 @@ Wanted in the first release if the must-haves land cleanly. None of these block 
 
 | # | Requirement | Why it is not a must |
 |---|---|---|
-| S1 | Auto-resume when the headphones reconnect | Brief §16 explicitly allows deferring this if unreliable. Possible only because the service stays alive while paused ([ADR-0005](adr/0005-foreground-service-hosts-monitoring.md)) |
+| S1 | Auto-resume when the headphones reconnect — *shipped and verified 2026-09-10, ~5 s unattended* | Brief §16 explicitly allows deferring this if unreliable. Possible only because the service stays alive while paused ([ADR-0005](adr/0005-foreground-service-hosts-monitoring.md)) |
 | S2 | Underrun, drift and lag counters, with periodic log summaries | The diagnostic surface for Scenario G. Needed to *understand* the product, not to run it |
 | S3 | `MIC` versus `UNPROCESSED` input toggle | Resolves [H4](feasibility.md) on real hardware. May become a must if `MIC` processing gates quiet room sound |
 | S4 | Software microphone gain with a limiter | Genuinely useful for hearing a quiet room, but `setVolume()` covers the basic case and gain risks clipping |

@@ -153,20 +153,54 @@ process runs without crashing, but nothing has yet looked at the screens on a de
 renderer. Still to check by eye: the four pause reasons, the two error kinds, the dim state and its
 touch-to-wake, the light theme, and whether the fixed layout holds without clipping.
 
-## Phase 5 — Robustness
+## Phase 5 — Robustness — **built 2026-09-10; Scenario E verified, F not run**
 
 The phase that turns a demo into something you would leave running near a child.
 
-- Audio focus: request on start, pause on transient loss, resume on gain, stop on permanent loss.
-- Phone/VoIP call: pause, never interfere, resume when it ends.
-- Bluetooth disconnect: pause with `BluetoothGone` and the message from brief §16. Auto-resume on
-  reconnect (S1) — the service stays alive, which is what makes this possible at all.
-- Microphone preemption: interpret read errors and sustained zero-frame runs, retry with backoff,
-  surface honestly after repeated failure.
-- Wrong-routing detection as a hard error with the observed device types shown.
+Four things can take the room away, and each is now noticed, named and recovered from:
+
+| What happens | Detected by | Recovery |
+|---|---|---|
+| A call starts | audio focus loss, with `getMode()` reading as a call | polls until the call ends |
+| Another app plays audio | audio focus loss | `AUDIOFOCUS_GAIN`, or polling `isMusicActive()` |
+| Headphones disconnect | `AudioDeviceCallback` | on reconnect, with a retry (S1) |
+| Another app takes the microphone | `isClientSilenced()` | when the flag clears |
+
+All transitions funnel through one `Mutex`, because they now arrive from three places at once — the
+focus listener and the device callback on the main thread, the watcher on a background dispatcher —
+and two interleaving would open streams another had just closed.
+
+**Three deliberate departures from the plan as written:**
+
+1. **A permanent focus loss pauses rather than stops.** The plan said stop. But the designed copy
+   promises *"stop that app and listening continues by itself"*, and after `AUDIOFOCUS_LOSS` Android
+   does not send a `GAIN` — so waiting for one would wait forever and make the sentence a lie.
+   Instead the watcher polls `isMusicActive()` and re-requests focus. Coarse, and it keeps the
+   promise.
+2. **A microphone preemption keeps its streams open.** Every other pause releases the microphone and
+   the focus — during a call, holding the microphone would be indefensible. But the recording
+   callback on our own live `AudioRecord` is the only thing that can report the *end* of a
+   silencing, so releasing it would mean guessing with a backoff timer. The user-facing claim is
+   honest either way: they are not hearing the room.
+3. **Reading the audio mode**, to tell a call from music. Both arrive as an identical focus loss, and
+   the alternative is `READ_PHONE_STATE`. `getMode()` is a read;
+   [ADR-0004](adr/0004-media-path-only.md) prohibits *setting* it, and the invariant guard was
+   narrowed from the constant names to `setMode(` and `.mode =` — strictly stronger against the
+   thing actually prohibited.
 
 **Gate:** Scenarios E and F pass, including recovery. Nothing in this phase results in a silent
 stop.
+
+**Gate status: half met.** **Scenario E passes, twice, with evidence**
+([run](test-runs/2026-09-10-oneplus-cph2399-phase5.md)): pause is immediate, screen and notification
+both carry the reason verbatim, auto-resume takes ~5 s unattended, and the routing assertion still
+reads `BUILTIN_MIC` → `BLUETOOTH_A2DP` afterwards — an automatic resume onto SCO would have been the
+nightmare case. The retry backoff proved necessary on the first attempt: Android reports the A2DP
+sink as usable about a second before it will accept a stream.
+
+**Scenario F has not been run.** Provoking it from `adb` means recording the user's room to a file,
+which is not mine to do. The call-reason wording and the `isMusicActive()` recovery are also
+unverified. Those three need a person, and the steps are in the run record.
 
 ## Phase 6 — Long run, drift, and battery
 

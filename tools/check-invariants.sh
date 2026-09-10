@@ -18,13 +18,20 @@ sources=$(find app/src -type f \( -name '*.kt' -o -name '*.java' \) 2>/dev/null 
 # 1. ADR-0004: the communication audio path is forbidden.
 #    Comment lines are stripped first, so the docs may name these APIs in order to forbid them.
 # ---------------------------------------------------------------------------
+# Note on the audio mode, narrowed 2026-09-10. ADR-0004 prohibits *setting* the mode - setMode is
+# what hands the device to the communication path and makes the earbud's microphone the input.
+# Reading it costs nothing, needs no permission, and is the only way to tell a phone call from
+# another app's music without READ_PHONE_STATE, which Phase 5 needs in order to name the pause
+# reason correctly. So the guard is on the setters - 'setMode(' and the Kotlin property assignment
+# '.mode =' - rather than on the constant names, which the earlier version banned outright and which
+# also banned comparing against them.
 forbidden=(
   'startBluetoothSco'
   'stopBluetoothSco'
   'setCommunicationDevice'
   'setSpeakerphoneOn'
-  'MODE_IN_COMMUNICATION'
-  'MODE_IN_CALL'
+  'setMode[[:space:]]*\('
+  '\.mode[[:space:]]*='
   'USAGE_VOICE_COMMUNICATION'
   'AudioSource\.VOICE_COMMUNICATION'
   'AudioSource\.VOICE_RECOGNITION'

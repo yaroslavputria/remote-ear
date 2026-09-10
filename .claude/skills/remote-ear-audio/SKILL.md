@@ -109,6 +109,18 @@ val outType = track.routedDevice?.type
   user. Do not continue in a "degraded mode": it means audio is arriving from the wrong microphone,
   which sounds fine and is wrong.
 
+**Reading the audio mode is allowed; setting it is not.** `getMode()` needs no permission and is the
+only way to tell a phone call from another app's music — both arrive as an identical audio-focus
+loss, and they need different words on screen. The guard in `tools/check-invariants.sh` is on
+`setMode(` and on the Kotlin property assignment `.mode =`, not on the constant names. Comparing
+against `MODE_IN_CALL` / `MODE_IN_COMMUNICATION` is fine and is what `MonitoringService.inCall()`
+does.
+
+**A resume after a Bluetooth reconnect must retry.** Measured 2026-09-10: Android reports the A2DP
+sink as present roughly a second *before* it will accept a stream, so the first attempt fails every
+time. A single-shot resume leaves the user paused indefinitely with headphones that look connected.
+Retry with a short backoff, and let the periodic watcher — not only the device callback — drive it.
+
 **Classify failures with a type, never by matching the message text.** This has already gone wrong
 here: the service decided whether a failed start was a resumable pause by testing the error string
 for `"Bluetooth"` — and every routing-failure message contains `BLUETOOTH_SCO`. The one failure this
