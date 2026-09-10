@@ -172,3 +172,21 @@ In rough order of value:
 4. **Colour tokens** for light and dark, including the state colours, checked for colour-blind
    safety and for legibility at low screen brightness.
 5. A note on how dim the Monitoring state can go while remaining readable at a glance in the dark.
+
+## In what form
+
+*Added 2026-09-10, after the first round. The brief said what was wanted and never said how to hand
+it over, and the answer came back as a 1.5 MB self-contained canvas with React, Babel and the Roboto
+webfonts inlined and the markup gzipped inside a manifest blob. The design was good; it just had to
+be unpacked with a script before a single hex value could be read.*
+
+Whatever else comes with it, these three are what get implemented from:
+
+1. **A token table** — name, dark value, light value, role. Hex, as text.
+2. **A copy table** — one row per state, screen wording and notification wording side by side.
+   Verbatim, because it goes into `strings.xml` unchanged.
+3. **The screens as plain HTML or images** — no bundler, no runtime, openable and diffable.
+
+Sizes in **dp**, and say which are fixed and which are flexible. If a decision was made that the
+brief did not ask for, say so explicitly rather than leaving it to be inferred from a mock — the
+first round added a dimmed listening state and an app icon, both good, both easy to miss.

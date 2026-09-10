@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<title>RemoteEar - designed screens</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--
+  Flattened copy of the design returned against docs/design-brief.md on 2026-09-10.
+  The source artifact was a 1.5 MB self-contained canvas with React, Babel and the
+  Roboto webfonts inlined and the markup gzipped inside it. This is the same markup
+  with the bundler stripped out: it opens in any browser, needs no network, and diffs
+  as text. Fonts fall back to the system sans-serif, so metrics differ slightly from
+  the original Roboto rendering. Spec: docs/design-spec.md
+-->
+<style>
+  * { margin:0; padding:0; box-sizing:border-box }
+  body { background:#0a0c0d }
+  .frame { width:412px; height:892px; border:8px solid rgba(116,119,117,0.5); border-radius:18px;
+           overflow:hidden; background:#0E1112; display:flex; flex-direction:column;
+           box-shadow:0 30px 80px rgba(0,0,0,0.25) }
+  .statusbar { height:40px; flex:none; display:flex; align-items:center; justify-content:space-between;
+               padding:0 16px; font-size:14px; color:#E6EAE9; position:relative }
+  .statusbar::after { content:""; position:absolute; left:50%; top:8px; transform:translateX(-50%);
+                      width:24px; height:24px; border-radius:100px; background:#2e2e2e }
+  .sbicons { width:46px; height:11px; border-radius:2px; background:#E6EAE9; opacity:0.75 }
+  .screen { height:828px; flex:none; overflow:hidden }
+  .nav { height:24px; flex:none; display:flex; align-items:center; justify-content:center }
+  .nav i { width:108px; height:4px; border-radius:2px; background:#fff; opacity:0.4 }
+</style></head><body>
+<div style="background:#0a0c0d;color:#E6EAE9;font-family:Roboto,system-ui,sans-serif;padding:64px 56px 96px;display:flex;flex-direction:column;gap:88px">
+
+  <div style="display:flex;flex-direction:column;gap:14px;max-width:760px">
+    <div style="font-family:'Roboto Mono',monospace;font-size:12px;letter-spacing:2.4px;text-transform:uppercase;color:#6FD3B8">RemoteEar — Android</div>
+    <div style="font-size:44px;font-weight:300;letter-spacing:-0.5px;line-height:1.1">One screen, ten states, and the wording that keeps them honest</div>
+    <div style="font-size:16px;line-height:1.6;color:#9AA3A2;text-wrap:pretty">Dark is the primary appearance. Every state is distinguished by shape, text and colour at once, so it survives a dark room, a glance, and colour blindness. Nothing below implies detection or alerting.</div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:28px">
+    <div style="display:flex;align-items:baseline;gap:16px;border-bottom:1px solid #23292a;padding-bottom:12px">
+      <div style="font-family:'Roboto Mono',monospace;font-size:12px;color:#6FD3B8">01</div>
+      <div style="font-size:22px;font-weight:400">The screen, in every state</div>
+      <div style="font-size:14px;color:#6E7877">412 × 892 dp · portrait · dark palette</div>
+    </div>
+    <div id="screens" style="display:flex;flex-wrap:wrap;gap:44px">
+
+  <div style="display:flex;flex-direction:column;gap:12px;width:428px" data-screen-label="Idle">
+    <div style="display:flex;align-items:baseline;gap:10px">
+      <div style="font-family:'Roboto Mono',monospace;font-size:12px;color:#6FD3B8">IDLE</div>
+      <div style="font-size:13px;color:#6E7877">the default on open</div>
+    </div>
+    <div class="frame"><div class="statusbar"><span>9:30</span><span class="sbicons"></span></div><div class="screen">
+      <div style="height:100%;box-sizing:border-box;display:flex;flex-direction:column;background:#0E1112;padding:6px 24px 12px;font-family:Roboto,system-ui,sans-serif">
+        <div style="font-family:'Roboto Mono',monospace;font-size:11px;letter-spacing:2.6px;color:#5E6867;padding:6px 0 0">REMOTEEAR</div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;text-align:center;padding:12px 0">
+          <div style="width:72px;height:72px;border-radius:50%;border:2px solid #4A5251;display:flex;align-items:center;justify-content:center">
+            <div style="width:14px;height:14px;border-radius:50%;background:#4A5251"></div>
+          </div>
+          <div style="font-size:30px;font-weight:400;line-height:1.2;color:#E6EAE9">Not listening</div>
+          <div style="font-size:16px;line-height:1.55;color:#9AA3A2;max-width:300px;text-wrap:pretty">Leave the phone in the room, tap Listen, and walk away. You'll hear the room in your headphones.</div>
+        </div>
+        <div style="height:92px;border-radius:46px;background:#6FD3B8;color:#04211B;display:flex;align-items:center;justify-content:center;gap:14px;font-size:23px;font-weight:500">
+          <div style="width:18px;height:18px;border-radius:50%;background:#04211B"></div>Listen
+        </div>
+        <div style="margin-top:18px;display:flex;flex-direction:column;gap:2px;background:#151A1B;border-radius:18px;padding:6px">
+          <div style="display:flex;align-items:center;gap:12px;padding:13px 14px;box-sizing:border-box">
+            <div style="width:10px;height:10px;border-radius:50%;background:#6FD3B8"></div>
+            <div style="flex:1;font-size:15px;color:#C9D0CF">Microphone</div>
+            <div style="font-size:15px;color:#9AA3A2">Allowed</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:13px 14px;box-sizing:border-box">
+            <div style="width:10px;height:10px;border-radius:50%;background:#6FD3B8"></div>
+            <div style="flex:1;font-size:15px;color:#C9D0CF">Headphones</div>
+            <div style="font-size:15px;color:#9AA3A2">Buds Pro</div>
+          </div>
+        </div>
+        <div style="margin-top:16px;display:flex;flex-direction:column;gap:16px">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;justify-content:space-between;font-size:14px;color:#9AA3A2"><span>Volume</span><span>Set with the phone buttons</span></div>
+            <div style="display:flex;gap:4px">
+              <div style="flex:1;height:6px;border-radius:3px;background:#8C9694"></div>
+              <div style="flex:1;height:6px;border-radius:3px;background:#8C9694"></div>
+              <div style="flex:1;height:6px;border-radius:3px;background:#8C9694"></div>
+              <div style="flex:1;height:6px;border-radius:3px;background:#8C9694"></div>
+              <div style="flex:1;height:6px;border-radius:3px;background:#252B2C"></div>
+              <div style="flex:1;height:6px;border-radius:3px;background:#252B2C"></div>
+              <div style="flex:1;height:6px;border-radius:3px;background:#252B2C"></div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;justify-content:space-between;font-size:14px;color:#9AA3A2"><span>Noise reduction</span><span style="color:#C9D0CF">Off</span></div>
+            <div style="display:flex;align-items:center;height:20px">
+              <div style="width:20px;height:20px;border-radius:50%;background:#C9D0CF"></div>
+              <div style="flex:1;height:4px;border-radius:2px;background:#2A3132"></div>
+            </div>
+            <div style="font-size:12px;line-height:1.45;color:#6E7877">More reduction can also hide quiet sounds.</div>
+          </div>
+        </div>
+        <div style="margin-top:18px;font-size:12px;line-height:1.5;color:#6E7877;text-wrap:pretty">Audio is processed on this phone only and played to your headphones. Nothing is recorded, saved, or sent anywhere. RemoteEar has no internet access.</div>
+      </div>
+    </div><div class="nav"><i></i></div></div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:12px;width:428px" data-screen-label="Starting">
+    <div style="display:flex;align-items:baseline;gap:10px">
+      <div style="font-family:'Roboto Mono',monospace;font-size:12px;color:#6FD3B8">STARTING</div>
+      <div style="font-size:13px;color:#6E7877">brief, but real — the control is inert, not gone</div>
+    </div>
+    <div class="frame"><div class="statusbar"><span>9:30</span><span class="sbicons"></span></div><div class="screen">
+      <div style="height:100%;box-sizing:border-box;display:flex;flex-direction:column;background:#0E1112;padding:6px 24px 12px;font-family:Roboto,system-ui,sans-serif">
+        <div style="font-family:'Roboto Mono',monospace;font-size:11px;letter-spacing:2.6px;color:#5E6867;padding:6px 0 0">REMOTEEAR</div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;text-align:center;padding:12px 0">
+          <div style="width:72px;height:72px;border-radius:50%;border:2px dashed #6FD3B8;display:flex;align-items:center;justify-content:center">
+            <div style="width:14px;height:14px;border-radius:50%;background:#6FD3B8"></div>
+          </div>
+          <div style="font-size:30px;font-weight:400;line-height:1.2;color:#E6EAE9">Starting</div>
+          <div style="font-size:16px;line-height:1.55;color:#9AA3A2;max-width:300px;text-wrap:pretty">Opening the microphone and checking your headphones. This takes a moment.</div>
+        </div>
+        <div style="height:92px;border-radius:46px;background:#1B2223;color:#7C8685;display:flex;align-items:center;justify-content:center;gap:14px;font-size:23px;font-weight:500">Starting…</div>
+        <div style="margin-top:18px;display:flex;flex-direction:column;gap:2px;background:#151A1B;border-radius:18px;padding:6px">
+          <div style="display:flex;align-items:center;gap:12px;padding:13px 14px;box-sizing:border-box">
+            <div style="width:10px;height:10px;border-radius:50%;background:#6FD3B8"></div>
+            <div style="flex:1;font-size:15px;color:#C9D0CF">Microphone</div>
+            <div style="font-size:15px;color:#9AA3A2">Allowed</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:13px 14px;box-sizing:border-box">
+            <div style="width:10px;height:10px;border-radius:50%;background:#6FD3B8"></div>
+            <div style="flex:1;font-size:15px;color:#C9D0CF">Headphones</div>
+            <div style="font-size:15px;color:#9AA3A2">Buds Pro</div>
+          </div>
+        </div>
+        <div style="margin-top:16px;display:flex;flex-direction:column;gap:16px">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;justify-content:space-between;font-size:14px;color:#9AA3A2"><span>Volume</span><span>Set with the phone buttons</span></div>
+            <div style="display:flex;gap:4px">
+              <div style="flex:1;height:6px;border-radius:3px;background:#8C9694"></div>
+              <div style="flex:1;height:6px;border-radius:3px;background:#8C9694"></div>
+              <div style="flex:1;height:6px;border-radius:3px;background:#8C9694"></div>
+              <div style="flex:1;height:6px;border-radius:3px;background:#8C9694"></div>
+              <div style="flex:1;height:6px;border-radius:3px;background:#252B2C"></div>
+              <div style="flex:1;height:6px;border-radius:3px;background:#252B2C"></div>
+              <div style="flex:1;height:6px;border-radius:3px;background:#252B2C"></div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;justify-content:space-between;font-size:14px;color:#9AA3A2"><span>Noise reduction</span><span style="color:#C9D0CF">Off</span></div>
+            <div style="display:flex;align-items:center;height:20px">
+              <div style="width:20px;height:20px;border-radius:50%;background:#C9D0CF"></div>
+              <div style="flex:1;height:4px;border-radius:2px;background:#2A3132"></div>
+            </div>
+            <div style="font-size:12px;line-height:1.45;color:#6E7877">More reduction can also hide quiet sounds.</div>
+          </div>
+        </div>
+        <div style="margin-top:18px;font-size:12px;line-height:1.5;color:#6E7877;text-wrap:pretty">Audio is processed on this phone only and played to your headphones. Nothing is recorded, saved, or sent anywhere. RemoteEar has no internet access.</div>
+      </div>
+    </div><div class="nav"><i></i></div></div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:12px;width:428px" data-screen-label="Monitoring">
+    <div style="display:flex;align-items:baseline;gap:10px">
+      <div style="font-family:'Roboto Mono',monospace;font-size:12px;color:#6FD3B8">LISTENING</div>
+      <div style="font-size:13px;color:#6E7877">stop reads differently at a glance: square, not round</div>
+    </div>
+    <div class="frame"><div class="statusbar"><span>9:30</span><span class="sbicons"></span></div><div class="screen">
+      <div style="height:100%;box-sizing:border-box;display:flex;flex-direction:column;background:#0E1112;padding:6px 24px 12px;font-family:Roboto,system-ui,sans-serif">
+        <div style="font-family:'Roboto Mono',monospace;font-size:11px;letter-spacing:2.6px;color:#5E6867;padding:6px 0 0">REMOTEEAR</div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;text-align:center;padding:12px 0">
+          <div style="width:96px;height:96px;border-radius:50%;border:2px solid #1F4A41;display:flex;align-items:center;justify-content:center">
+            <div style="width:72px;height:72px;border-radius:50%;border:2px solid #6FD3B8;display:flex;align-items:center;justify-content:center">
+              <div style="width:26px;height:26px;border-radius:50%;background:#6FD3B8"></div>
+            </div>
+          </div>
+          <div style="font-size:34px;font-weight:400;line-height:1.2;color:#6FD3B8">Listening</div>
+          <div style="font-size:16px;line-height:1.55;color:#9AA3A2;max-width:300px;text-wrap:pretty">This room is playing to your headphones. You can put the phone down and leave.</div>
+        </div>
+        <div style="height:92px;border-radius:20px;background:#232B2C;border:2px solid #48524F;color:#E6EAE9;display:flex;align-items:center;justify-content:center;gap:14px;font-size:23px;font-weight:500">
+          <div style="width:18px;height:18px;border-radius:3px;background:#E6EAE9"></div>Stop listening
+        </div>
+        <div style="margin-top:18px;display:flex;flex-direction:column;gap:2px;background:#151A1B;border-radius:18px;padding:6px">
+          <div style="display:flex;align-items:center;gap:12px;padding:13px 14px;box-sizing:border-box">
+            <div style="width:10px;height:10px;border-radius:50%;background:#6FD3B8"></div>
+            <div style="flex:1;font-size:15px;color:#C9D0CF">Microphone</div>
+            <div style="font-size:15px;color:#9AA3A2">In use by RemoteEar</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:13px 14px;box-sizing:border-box">
+            <div style="width:10px;height:10px;border-radius:50%;background:#6FD3B8"></div>
+            <div style="flex:1;font-size:15px;color:#C9D0CF">Headphones</div>
+            <div style="font-size:15px;color:#9AA3A2">Buds Pro</div>
+          </div>
+        </div>
+        <div style="margin-top:16px;display:flex;flex-direction:column;gap:16px">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;justify-content:space-between;font-size:14px;color:#9AA3A2"><span>Volume</span><span>Set with the phone buttons</span></div>
+            <div style="display:flex;gap:4px">
+              <div style="flex:1;height:6px;border-radius:3px;background:#8C9694"></div>
+              <div style="flex:1;height:6px;border-radius:3px;background:#8C9694"></div>
+              <div style="flex:1;height:6px;border-radius:3px;background:#8C9694"></div>
+              <div style="flex:1;height:6px;border-radius:3px;background:#8C9694"></div>
+              <div style="flex:1;height:6px;border-radius:3px;background:#252B2C"></div>
+              <div style="flex:1;height:6px;border-radius:3px;background:#252B2C"></div>
+              <div style="flex:1;height:6px;border-radius:3px;background:#252B2C"></div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;justify-content:space-between;font-size:14px;color:#9AA3A2"><span>Noise reduction</span><span style="color:#C9D0CF">Low</span></div>
+            <div style="display:flex;align-items:center;height:20px">
+              <div style="width:78px;height:4px;border-radius:2px;background:#6FD3B8"></div>
+              <div style="width:20px;height:20px;border-radius:50%;background:#6FD3B8"></div>
+              <div style="flex:1;height:4px;border-radius:2px;background:#2A3132"></div>
+            </div>
+            <div style="font-size:12px;line-height:1.45;color:#6E7877">More reduction can also hide quiet sounds.</div>
+          </div>
+        </div>
+        <div style="margin-top:18px;font-size:12px;line-height:1.5;color:#6E7877;text-wrap:pretty">Audio is processed on this phone only and played to your headphones. Nothing is recorded, saved, or sent anywhere. RemoteEar has no internet access.</div>
+      </div>
+    </div><div class="nav"><i></i></div></div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:12px;width:428px" data-screen-label="Listening dimmed">
+    <div style="display:flex;align-items:baseline;gap:10px">
+      <div style="font-family:'Roboto Mono',monospace;font-size:12px;color:#F2B45C">LISTENING · DIMMED</div>
+      <div style="font-size:13px;color:#6E7877">after 20 s untouched, in a dark room</div>
+    </div>
+    <div class="frame"><div class="statusbar"><span>9:30</span><span class="sbicons"></span></div><div class="screen">
+      <div style="height:100%;box-sizing:border-box;display:flex;flex-direction:column;background:#000000;padding:6px 24px 12px;font-family:Roboto,system-ui,sans-serif">
+        <div style="font-family:'Roboto Mono',monospace;font-size:11px;letter-spacing:2.6px;color:#2A2F2E;padding:6px 0 0">REMOTEEAR</div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;text-align:center;padding:12px 0">
+          <div style="width:72px;height:72px;border-radius:50%;border:2px solid #2F776A;display:flex;align-items:center;justify-content:center">
+            <div style="width:26px;height:26px;border-radius:50%;background:#2F776A"></div>
+          </div>
+          <div style="font-size:34px;font-weight:400;line-height:1.2;color:#3E8C7D">Listening</div>
+          <div style="font-size:15px;line-height:1.55;color:#4A5251;max-width:300px;text-wrap:pretty">Tap anywhere to brighten the screen.</div>
+        </div>
+        <div style="height:92px;border-radius:20px;background:#0C0F10;border:2px solid #262C2C;color:#5C6564;display:flex;align-items:center;justify-content:center;gap:14px;font-size:23px;font-weight:500">
+          <div style="width:18px;height:18px;border-radius:3px;background:#5C6564"></div>Stop listening
+        </div>
+        <div style="margin-top:22px;font-size:12px;line-height:1.5;color:#2A2F2E">Status, volume and noise reduction fade out. State text and Stop never do.</div>
+      </div>
+    </div><div class="nav"><i></i></div></div>
+  </div>
+
+
+  <div style="display:flex;flex-direction:column;gap:12px;width:428px" data-screen-label="Paused headphones">
+    <div style="display:flex;align-items:baseline;gap:10px">
+      <div style="font-family:'Roboto Mono',monospace;font-size:12px;color:#F2B45C">PAUSED · HEADPHONES</div>
+      <div style="font-size:13px;color:#6E7877">resumes by itself</div>
+    </div>
+    <div class="frame"><div class="statusbar"><span>9:30</span><span class="sbicons"></span></div><div class="screen">
+      <div style="height:100%;box-sizing:border-box;display:flex;flex-direction:column;background:#0E1112;padding:6px 24px 12px;font-family:Roboto,system-ui,sans-serif">
+        <div style="font-family:'Roboto Mono',monospace;font-size:11px;letter-spacing:2.6px;color:#5E6867;padding:6px 0 0">REMOTEEAR</div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;text-align:center;padding:12px 0">
+          <div style="width:72px;height:72px;border-radius:50%;border:2px solid #F2B45C;display:flex;align-items:center;justify-content:center;gap:7px">
+            <div style="width:7px;height:28px;border-radius:2px;background:#F2B45C"></div>
+            <div style="width:7px;height:28px;border-radius:2px;background:#F2B45C"></div>
+          </div>
+          <div style="font-size:34px;font-weight:400;line-height:1.2;color:#F2B45C">Paused</div>
+          <div style="font-size:19px;line-height:1.4;color:#E6EAE9;max-width:310px;text-wrap:pretty">Bluetooth headphones disconnected.</div>
+          <div style="font-size:16px;line-height:1.55;color:#9AA3A2;max-width:300px;text-wrap:pretty">Reconnect your headphones and listening continues on its own.</div>
+        </div>
+        <div style="height:92px;border-radius:20px;background:#232B2C;border:2px solid #48524F;color:#E6EAE9;display:flex;align-items:center;justify-content:center;gap:14px;font-size:23px;font-weight:500">
+          <div style="width:18px;height:18px;border-radius:3px;background:#E6EAE9"></div>Stop listening
+        </div>
+        <div style="margin-top:18px;display:flex;flex-direction:column;gap:2px;background:#151A1B;border-radius:18px;padding:6px">
+          <div style="display:flex;align-items:center;gap:12px;padding:13px 14px;box-sizing:border-box">
+            <div style="width:10px;height:10px;border-radius:50%;background:#6FD3B8"></div>
+            <div style="flex:1;font-size:15px;color:#C9D0CF">Microphone</div>
+            <div style="font-size:15px;color:#9AA3A2">Allowed</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:13px 14px;box-sizing:border-box">
+            <div style="width:10px;height:10px;border-radius:50%;background:#F2B45C"></div>
+            <div style="flex:1;font-size:15px;color:#C9D0CF">Headphones</div>
+            <div style="font-size:15px;color:#F2B45C">Disconnected</div>
+          </div>
+        </div>
+        <div style="margin-top:16px;display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;justify-content:space-between;font-size:14px;color:#9AA3A2"><span>Noise reduction</span><span style="color:#C9D0CF">Low</span></div>
+          <div style="display:flex;align-items:center;height:20px">
+            <div style="width:78px;height:4px;border-radius:2px;background:#8C9694"></div>
+            <div style="width:20px;height:20px;border-radius:50%;background:#8C9694"></div>
+            <div style="flex:1;height:4px;border-radius:2px;background:#2A3132"></div>
+          </div>
+        </div>
+        <div style="margin-top:18px;font-size:12px;line-height:1.5;color:#6E7877;text-wrap:pretty">Audio is processed on this phone only and played to your headphones. Nothing is recorded, saved, or sent anywhere. RemoteEar has no internet access.</div>
+      </div>
+    </div><div class="nav"><i></i></div></div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:12px;width:428px" data-screen-label="Paused call">
+    <div style="display:flex;align-items:baseline;gap:10px">
+      <div style="font-family:'Roboto Mono',monospace;font-size:12px;color:#F2B45C">PAUSED · PHONE CALL</div>
+      <div style="font-size:13px;color:#6E7877">resumes when the call ends</div>
+    </div>
+    <div class="frame"><div class="statusbar"><span>9:30</span><span class="sbicons"></span></div><div class="screen">
+      <div style="height:100%;box-sizing:border-box;display:flex;flex-direction:column;background:#0E1112;padding:6px 24px 12px;font-family:Roboto,system-ui,sans-serif">
+        <div style="font-family:'Roboto Mono',monospace;font-size:11px;letter-spacing:2.6px;color:#5E6867;padding:6px 0 0">REMOTEEAR</div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;text-align:center;padding:12px 0">
+          <div style="width:72px;height:72px;border-radius:50%;border:2px solid #F2B45C;display:flex;align-items:center;justify-content:center;gap:7px">
+            <div style="width:7px;height:28px;border-radius:2px;background:#F2B45C"></div>
+            <div style="width:7px;height:28px;border-radius:2px;background:#F2B45C"></div>
+          </div>
+          <div style="font-size:34px;font-weight:400;line-height:1.2;color:#F2B45C">Paused</div>
+          <div style="font-size:19px;line-height:1.4;color:#E6EAE9;max-width:310px;text-wrap:pretty">A phone call is in progress.</div>
+          <div style="font-size:16px;line-height:1.55;color:#9AA3A2;max-width:300px;text-wrap:pretty">Listening continues by itself when the call ends.</div>
+        </div>
+        <div style="height:92px;border-radius:20px;background:#232B2C;border:2px solid #48524F;color:#E6EAE9;display:flex;align-items:center;justify-content:center;gap:14px;font-size:23px;font-weight:500">
+          <div style="width:18px;height:18px;border-radius:3px;background:#E6EAE9"></div>Stop listening
+        </div>
+        <div style="margin-top:18px;display:flex;flex-direction:column;gap:2px;background:#151A1B;border-radius:18px;padding:6px">
+          <div style="display:flex;align-items:center;gap:12px;padding:13px 14px;box-sizing:border-box">
+            <div style="width:10px;height:10px;border-radius:50%;background:#F2B45C"></div>
+            <div style="flex:1;font-size:15px;color:#C9D0CF">Microphone</div>
+            <div style="font-size:15px;color:#F2B45C">Used by the call</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:13px 14px;box-sizing:border-box">
+            <div style="width:10px;height:10px;border-radius:50%;background:#6FD3B8"></div>
+            <div style="flex:1;font-size:15px;color:#C9D0CF">Headphones</div>
+            <div style="font-size:15px;color:#9AA3A2">Buds Pro</div>
+          </div>
+        </div>
+        <div style="margin-top:16px;display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;justify-content:space-between;font-size:14px;color:#9AA3A2"><span>Noise reduction</span><span style="color:#C9D0CF">Low</span></div>
+          <div style="display:flex;align-items:center;height:20px">
+            <div style="width:78px;height:4px;border-radius:2px;background:#8C9694"></div>
+            <div style="width:20px;height:20px;border-radius:50%;background:#8C9694"></div>
+            <div style="flex:1;height:4px;border-radius:2px;background:#2A3132"></div>
+          </div>
+        </div>
+        <div style="margin-top:18px;font-size:12px;line-height:1.5;color:#6E7877;text-wrap:pretty">Audio is processed on this phone only and played to your headphones. Nothing is recorded, saved, or sent anywhere. RemoteEar has no internet access.</div>
+      </div>
+    </div><div class="nav"><i></i></div></div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:12px;width:428px" data-screen-label="Paused audio">
+    <div style="display:flex;align-items:baseline;gap:10px">
+      <div style="font-family:'Roboto Mono',monospace;font-size:12px;color:#F2B45C">PAUSED · AUDIO INTERRUPTED</div>
+      <div style="font-size:13px;color:#6E7877">another app took audio focus</div>
+    </div>
+    <div class="frame"><div class="statusbar"><span>9:30</span><span class="sbicons"></span></div><div class="screen">
+      <div style="height:100%;box-sizing:border-box;display:flex;flex-direction:column;background:#0E1112;padding:6px 24px 12px;font-family:Roboto,system-ui,sans-serif">
+        <div style="font-family:'Roboto Mono',monospace;font-size:11px;letter-spacing:2.6px;color:#5E6867;padding:6px 0 0">REMOTEEAR</div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;text-align:center;padding:12px 0">
+          <div style="width:72px;height:72px;border-radius:50%;border:2px solid #F2B45C;display:flex;align-items:center;justify-content:center;gap:7px">
+            <div style="width:7px;height:28px;border-radius:2px;background:#F2B45C"></div>
+            <div style="width:7px;height:28px;border-radius:2px;background:#F2B45C"></div>
+          </div>
+          <div style="font-size:34px;font-weight:400;line-height:1.2;color:#F2B45C">Paused</div>
+          <div style="font-size:19px;line-height:1.4;color:#E6EAE9;max-width:310px;text-wrap:pretty">Another app is playing sound to your headphones.</div>
+          <div style="font-size:16px;line-height:1.55;color:#9AA3A2;max-width:300px;text-wrap:pretty">Stop that app and listening continues by itself.</div>
+        </div>
+        <div style="height:92px;border-radius:20px;background:#232B2C;border:2px solid #48524F;color:#E6EAE9;display:flex;align-items:center;justify-content:center;gap:14px;font-size:23px;font-weight:500">
+          <div style="width:18px;height:18px;border-radius:3px;background:#E6EAE9"></div>Stop listening
+        </div>
+        <div style="margin-top:18px;display:flex;flex-direction:column;gap:2px;background:#151A1B;border-radius:18px;padding:6px">
+          <div style="display:flex;align-items:center;gap:12px;padding:13px 14px;box-sizing:border-box">
+            <div style="width:10px;height:10px;border-radius:50%;background:#6FD3B8"></div>
+            <div style="flex:1;font-size:15px;color:#C9D0CF">Microphone</div>
+            <div style="font-size:15px;color:#9AA3A2">Allowed</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:13px 14px;box-sizing:border-box">
+            <div style="width:10px;height:10px;border-radius:50%;background:#F2B45C"></div>
+            <div style="flex:1;font-size:15px;color:#C9D0CF">Headphones</div>
+            <div style="font-size:15px;color:#F2B45C">Busy with another app</div>
+          </div>
+        </div>
+        <div style="margin-top:16px;display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;justify-content:space-between;font-size:14px;color:#9AA3A2"><span>Noise reduction</span><span style="color:#C9D0CF">Low</span></div>
+          <div style="display:flex;align-items:center;height:20px">
+            <div style="width:78px;height:4px;border-radius:2px;background:#8C9694"></div>
+            <div style="width:20px;height:20px;border-radius:50%;background:#8C9694"></div>
+            <div style="flex:1;height:4px;border-radius:2px;background:#2A3132"></div>
+          </div>
+        </div>
+        <div style="margin-top:18px;font-size:12px;line-height:1.5;color:#6E7877;text-wrap:pretty">Audio is processed on this phone only and played to your headphones. Nothing is recorded, saved, or sent anywhere. RemoteEar has no internet access.</div>
+      </div>
+    </div><div class="nav"><i></i></div></div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:12px;width:428px" data-screen-label="Paused mic elsewhere">
+    <div style="display:flex;align-items:baseline;gap:10px">
+      <div style="font-family:'Roboto Mono',monospace;font-size:12px;color:#F2B45C">PAUSED · MICROPHONE IN USE</div>
+      <div style="font-size:13px;color:#6E7877">another app took the microphone</div>
+    </div>
+    <div class="frame"><div class="statusbar"><span>9:30</span><span class="sbicons"></span></div><div class="screen">
+      <div style="height:100%;box-sizing:border-box;display:flex;flex-direction:column;background:#0E1112;padding:6px 24px 12px;font-family:Roboto,system-ui,sans-serif">
+        <div style="font-family:'Roboto Mono',monospace;font-size:11px;letter-spacing:2.6px;color:#5E6867;padding:6px 0 0">REMOTEEAR</div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;text-align:center;padding:12px 0">
+          <div style="width:72px;height:72px;border-radius:50%;border:2px solid #F2B45C;display:flex;align-items:center;justify-content:center;gap:7px">
+            <div style="width:7px;height:28px;border-radius:2px;background:#F2B45C"></div>
+            <div style="width:7px;height:28px;border-radius:2px;background:#F2B45C"></div>
+          </div>
+          <div style="font-size:34px;font-weight:400;line-height:1.2;color:#F2B45C">Paused</div>
+          <div style="font-size:19px;line-height:1.4;color:#E6EAE9;max-width:310px;text-wrap:pretty">Another app is using the microphone.</div>
+          <div style="font-size:16px;line-height:1.55;color:#9AA3A2;max-width:300px;text-wrap:pretty">Close that app and listening continues by itself.</div>
+        </div>
+        <div style="height:92px;border-radius:20px;background:#232B2C;border:2px solid #48524F;color:#E6EAE9;display:flex;align-items:center;justify-content:center;gap:14px;font-size:23px;font-weight:500">
+          <div style="width:18px;height:18px;border-radius:3px;background:#E6EAE9"></div>Stop listening
+        </div>
+        <div style="margin-top:18px;display:flex;flex-direction:column;gap:2px;background:#151A1B;border-radius:18px;padding:6px">
+          <div style="display:flex;align-items:center;gap:12px;padding:13px 14px;box-sizing:border-box">
+            <div style="width:10px;height:10px;border-radius:50%;background:#F2B45C"></div>
+            <div style="flex:1;font-size:15px;color:#C9D0CF">Microphone</div>
+            <div style="font-size:15px;color:#F2B45C">Used by another app</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:13px 14px;box-sizing:border-box">
+            <div style="width:10px;height:10px;border-radius:50%;background:#6FD3B8"></div>
+            <div style="flex:1;font-size:15px;color:#C9D0CF">Headphones</div>
+            <div style="font-size:15px;color:#9AA3A2">Buds Pro</div>
+          </div>
+        </div>
+        <div style="margin-top:16px;display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;justify-content:space-between;font-size:14px;color:#9AA3A2"><span>Noise reduction</span><span style="color:#C9D0CF">Low</span></div>
+          <div style="display:flex;align-items:center;height:20px">
+            <div style="width:78px;height:4px;border-radius:2px;background:#8C9694"></div>
+            <div style="width:20px;height:20px;border-radius:50%;background:#8C9694"></div>
+            <div style="flex:1;height:4px;border-radius:2px;background:#2A3132"></div>
+          </div>
+        </div>
+        <div style="margin-top:18px;font-size:12px;line-height:1.5;color:#6E7877;text-wrap:pretty">Audio is processed on this phone only and played to your headphones. Nothing is recorded, saved, or sent anywhere. RemoteEar has no internet access.</div>
+      </div>
+    </div><div class="nav"><i></i></div></div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:12px;width:428px" data-screen-label="Error">
+    <div style="display:flex;align-items:baseline;gap:10px">
+      <div style="font-family:'Roboto Mono',monospace;font-size:12px;color:#FF9A8F">ERROR</div>
+      <div style="font-size:13px;color:#6E7877">the only state that asks the user to act</div>
+    </div>
+    <div class="frame"><div class="statusbar"><span>9:30</span><span class="sbicons"></span></div><div class="screen">
+      <div style="height:100%;box-sizing:border-box;display:flex;flex-direction:column;background:#0E1112;padding:6px 24px 12px;font-family:Roboto,system-ui,sans-serif">
+        <div style="font-family:'Roboto Mono',monospace;font-size:11px;letter-spacing:2.6px;color:#5E6867;padding:6px 0 0">REMOTEEAR</div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;text-align:center;padding:12px 0">
+          <div style="width:72px;height:72px;border-radius:50%;background:#3A1512;border:2px solid #FF9A8F;display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:500;color:#FF9A8F;line-height:1">!</div>
+          <div style="font-size:34px;font-weight:400;line-height:1.2;color:#FF9A8F">Stopped</div>
+          <div style="font-size:19px;line-height:1.4;color:#E6EAE9;max-width:310px;text-wrap:pretty">The microphone could not be opened.</div>
+          <div style="font-size:16px;line-height:1.55;color:#9AA3A2;max-width:300px;text-wrap:pretty">You are not hearing the room. Tap Listen to try again.</div>
+        </div>
+        <div style="height:92px;border-radius:46px;background:#6FD3B8;color:#04211B;display:flex;align-items:center;justify-content:center;gap:14px;font-size:23px;font-weight:500">
+          <div style="width:18px;height:18px;border-radius:50%;background:#04211B"></div>Listen
+        </div>
+        <div style="margin-top:18px;display:flex;flex-direction:column;gap:2px;background:#151A1B;border-radius:18px;padding:6px">
+          <div style="display:flex;align-items:center;gap:12px;padding:13px 14px;box-sizing:border-box">
+            <div style="width:10px;height:10px;border-radius:50%;background:#6FD3B8"></div>
+            <div style="flex:1;font-size:15px;color:#C9D0CF">Microphone</div>
+            <div style="font-size:15px;color:#9AA3A2">Allowed</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:13px 14px;box-sizing:border-box">
+            <div style="width:10px;height:10px;border-radius:50%;background:#6FD3B8"></div>
+            <div style="flex:1;font-size:15px;color:#C9D0CF">Headphones</div>
+            <div style="font-size:15px;color:#9AA3A2">Buds Pro</div>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:12px;padding:13px 14px;box-sizing:border-box;background:#2A1210;border-radius:14px">
+            <div style="width:10px;height:10px;border-radius:50%;background:#FF9A8F;margin-top:5px"></div>
+            <div style="flex:1;font-size:14px;line-height:1.45;color:#FFC2BA;text-align:left">Error · the audio device rejected the recording request (code AUDIO_OPEN_FAILED).</div>
+          </div>
+        </div>
+        <div style="margin-top:18px;font-size:12px;line-height:1.5;color:#6E7877;text-wrap:pretty">Audio is processed on this phone only and played to your headphones. Nothing is recorded, saved, or sent anywhere. RemoteEar has no internet access.</div>
+      </div>
+    </div><div class="nav"><i></i></div></div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:12px;width:428px" data-screen-label="Permission">
+    <div style="display:flex;align-items:baseline;gap:10px">
+      <div style="font-family:'Roboto Mono',monospace;font-size:12px;color:#9AA3A2">PERMISSION NOT GRANTED</div>
+      <div style="font-size:13px;color:#6E7877">rationale before the system dialog</div>
+    </div>
+    <div class="frame"><div class="statusbar"><span>9:30</span><span class="sbicons"></span></div><div class="screen">
+      <div style="height:100%;box-sizing:border-box;display:flex;flex-direction:column;background:#0E1112;padding:6px 24px 12px;font-family:Roboto,system-ui,sans-serif">
+        <div style="font-family:'Roboto Mono',monospace;font-size:11px;letter-spacing:2.6px;color:#5E6867;padding:6px 0 0">REMOTEEAR</div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;text-align:center;padding:12px 0">
+          <div style="width:72px;height:72px;border-radius:50%;border:2px solid #8C9694;display:flex;align-items:center;justify-content:center;overflow:hidden">
+            <div style="width:82px;height:2px;background:#8C9694;transform:rotate(-45deg)"></div>
+          </div>
+          <div style="font-size:30px;font-weight:400;line-height:1.2;color:#E6EAE9">Microphone access needed</div>
+          <div style="font-size:16px;line-height:1.55;color:#9AA3A2;max-width:310px;text-wrap:pretty">RemoteEar plays this room to your headphones, live. It cannot do that without the microphone. Nothing is recorded, saved, or sent anywhere — the app has no internet access.</div>
+        </div>
+        <div style="height:92px;border-radius:46px;background:#6FD3B8;color:#04211B;display:flex;align-items:center;justify-content:center;font-size:23px;font-weight:500">Allow microphone</div>
+        <div style="margin-top:18px;display:flex;flex-direction:column;gap:2px;background:#151A1B;border-radius:18px;padding:6px">
+          <div style="display:flex;align-items:center;gap:12px;padding:13px 14px;box-sizing:border-box">
+            <div style="width:10px;height:10px;border-radius:50%;background:#8C9694"></div>
+            <div style="flex:1;font-size:15px;color:#C9D0CF">Microphone</div>
+            <div style="font-size:15px;color:#C9D0CF">Not allowed</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:13px 14px;box-sizing:border-box">
+            <div style="width:10px;height:10px;border-radius:50%;background:#6FD3B8"></div>
+            <div style="flex:1;font-size:15px;color:#C9D0CF">Headphones</div>
+            <div style="font-size:15px;color:#9AA3A2">Buds Pro</div>
+          </div>
+        </div>
+        <div style="margin-top:18px;font-size:12px;line-height:1.5;color:#6E7877;text-wrap:pretty">If you refused before, Android will not ask again — open Settings › Apps › RemoteEar › Permissions.</div>
+      </div>
+    </div><div class="nav"><i></i></div></div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:12px;width:428px" data-screen-label="No headphones">
+    <div style="display:flex;align-items:baseline;gap:10px">
+      <div style="font-family:'Roboto Mono',monospace;font-size:12px;color:#9AA3A2">IDLE · CONTROL DISABLED</div>
+      <div style="font-size:13px;color:#6E7877">the button says why, and enables itself when buds connect</div>
+    </div>
+    <div class="frame"><div class="statusbar"><span>9:30</span><span class="sbicons"></span></div><div class="screen">
+      <div style="height:100%;box-sizing:border-box;display:flex;flex-direction:column;background:#0E1112;padding:6px 24px 12px;font-family:Roboto,system-ui,sans-serif">
+        <div style="font-family:'Roboto Mono',monospace;font-size:11px;letter-spacing:2.6px;color:#5E6867;padding:6px 0 0">REMOTEEAR</div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;text-align:center;padding:12px 0">
+          <div style="width:72px;height:72px;border-radius:50%;border:2px solid #4A5251;display:flex;align-items:center;justify-content:center">
+            <div style="width:14px;height:14px;border-radius:50%;background:#4A5251"></div>
+          </div>
+          <div style="font-size:30px;font-weight:400;line-height:1.2;color:#E6EAE9">Not listening</div>
+          <div style="font-size:16px;line-height:1.55;color:#9AA3A2;max-width:300px;text-wrap:pretty">Connect the earbud you'll be carrying. RemoteEar plays only to headphones, never to the speaker.</div>
+        </div>
+        <div style="height:92px;border-radius:46px;background:#1B2223;border:1px solid #2E3536;color:#7C8685;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">
+          <div style="font-size:23px;font-weight:500">Listen</div>
+          <div style="font-size:14px">Connect headphones first</div>
+        </div>
+        <div style="margin-top:18px;display:flex;flex-direction:column;gap:2px;background:#151A1B;border-radius:18px;padding:6px">
+          <div style="display:flex;align-items:center;gap:12px;padding:13px 14px;box-sizing:border-box">
+            <div style="width:10px;height:10px;border-radius:50%;background:#6FD3B8"></div>
+            <div style="flex:1;font-size:15px;color:#C9D0CF">Microphone</div>
+            <div style="font-size:15px;color:#9AA3A2">Allowed</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:13px 14px;box-sizing:border-box">
+            <div style="width:10px;height:10px;border-radius:50%;background:#8C9694"></div>
+            <div style="flex:1;font-size:15px;color:#C9D0CF">Headphones</div>
+            <div style="font-size:15px;color:#C9D0CF">None connected</div>
+          </div>
+        </div>
+        <div style="margin-top:18px;font-size:12px;line-height:1.5;color:#6E7877;text-wrap:pretty">Audio is processed on this phone only and played to your headphones. Nothing is recorded, saved, or sent anywhere. RemoteEar has no internet access.</div>
+      </div>
+    </div><div class="nav"><i></i></div></div>
+  </div>
+<span id="screens-end"></span></div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:28px">
+    <div style="display:flex;align-items:baseline;gap:16px;border-bottom:1px solid #23292a;padding-bottom:12px">
+      <div style="font-family:'Roboto Mono',monospace;font-size:12px;color:#6FD3B8">02</div>
+      <div style="font-size:22px;font-weight:400">The notification</div>
+      <div style="font-size:14px;color:#6E7877">ongoing · IMPORTANCE_LOW · silent · not dismissable while listening</div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:32px">
+
+      <div style="display:flex;flex-direction:column;gap:12px;width:400px">
+        <div style="font-family:'Roboto Mono',monospace;font-size:12px;color:#6FD3B8">LISTENING</div>
+        <div style="background:#1B1F20;border-radius:26px;padding:18px 20px;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#9AA3A2">
+            <div style="width:18px;height:18px;border-radius:50%;background:#6FD3B8"></div>
+            <span>RemoteEar</span><span>·</span><span>now</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <div style="font-size:17px;font-weight:500;color:#E6EAE9">Listening</div>
+            <div style="font-size:15px;line-height:1.45;color:#9AA3A2;text-wrap:pretty">The room is playing to Buds Pro.</div>
+          </div>
+          <div style="border-top:1px solid #2C3233;padding-top:12px;display:flex;gap:24px">
+            <div style="font-size:15px;font-weight:500;color:#6FD3B8;padding:6px 0">Stop listening</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:12px;width:400px">
+        <div style="font-family:'Roboto Mono',monospace;font-size:12px;color:#F2B45C">PAUSED</div>
+        <div style="background:#1B1F20;border-radius:26px;padding:18px 20px;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#9AA3A2">
+            <div style="width:18px;height:18px;border-radius:50%;background:#F2B45C"></div>
+            <span>RemoteEar</span><span>·</span><span>now</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <div style="font-size:17px;font-weight:500;color:#F2B45C">Paused — headphones disconnected</div>
+            <div style="font-size:15px;line-height:1.45;color:#9AA3A2;text-wrap:pretty">You are not hearing the room. Reconnect your headphones to continue.</div>
+          </div>
+          <div style="border-top:1px solid #2C3233;padding-top:12px;display:flex;gap:24px">
+            <div style="font-size:15px;font-weight:500;color:#6FD3B8;padding:6px 0">Stop listening</div>
+          </div>
+        </div>
+        <div style="font-size:13px;line-height:1.5;color:#6E7877;text-wrap:pretty">The title carries the reason, because a collapsed notification often shows the title alone. The four other reasons swap in verbatim from the table below.</div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:12px;width:400px">
+        <div style="font-family:'Roboto Mono',monospace;font-size:12px;color:#FF9A8F">ERROR</div>
+        <div style="background:#1B1F20;border-radius:26px;padding:18px 20px;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#9AA3A2">
+            <div style="width:18px;height:18px;border-radius:50%;background:#FF9A8F"></div>
+            <span>RemoteEar</span><span>·</span><span>now</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <div style="font-size:17px;font-weight:500;color:#FF9A8F">Stopped — the microphone could not be opened</div>
+            <div style="font-size:15px;line-height:1.45;color:#9AA3A2;text-wrap:pretty">You are not hearing the room. Open RemoteEar to try again.</div>
+          </div>
+          <div style="border-top:1px solid #2C3233;padding-top:12px;display:flex;gap:24px">
+            <div style="font-size:15px;font-weight:500;color:#6FD3B8;padding:6px 0">Open RemoteEar</div>
+            <div style="font-size:15px;font-weight:500;color:#9AA3A2;padding:6px 0">Dismiss</div>
+          </div>
+        </div>
+        <div style="font-size:13px;line-height:1.5;color:#6E7877;text-wrap:pretty">Error is the only variant that is dismissable, and the only one whose primary action opens the app.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:28px">
+    <div style="display:flex;align-items:baseline;gap:16px;border-bottom:1px solid #23292a;padding-bottom:12px">
+      <div style="font-family:'Roboto Mono',monospace;font-size:12px;color:#6FD3B8">03</div>
+      <div style="font-size:22px;font-weight:400">Microcopy, verbatim</div>
+      <div style="font-size:14px;color:#6E7877">the wording is the safety feature — screen and notification never disagree</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:2px;max-width:1180px">
+      <div style="display:grid;grid-template-columns:180px 1fr 1fr;gap:24px;padding:10px 18px;font-family:'Roboto Mono',monospace;font-size:11px;letter-spacing:1.6px;color:#6E7877">
+        <div>STATE</div><div>SCREEN</div><div>NOTIFICATION</div>
+      </div>
+      <div style="display:grid;grid-template-columns:180px 1fr 1fr;gap:24px;padding:18px;background:#121617;border-radius:14px">
+        <div style="font-size:15px;color:#C9D0CF">Idle</div>
+        <div style="font-size:15px;line-height:1.5;color:#9AA3A2"><span style="color:#E6EAE9">Not listening</span><br>Leave the phone in the room, tap Listen, and walk away. You'll hear the room in your headphones.</div>
+        <div style="font-size:15px;line-height:1.5;color:#6E7877">No notification.</div>
+      </div>
+      <div style="display:grid;grid-template-columns:180px 1fr 1fr;gap:24px;padding:18px;background:#121617;border-radius:14px">
+        <div style="font-size:15px;color:#C9D0CF">Starting</div>
+        <div style="font-size:15px;line-height:1.5;color:#9AA3A2"><span style="color:#E6EAE9">Starting</span><br>Opening the microphone and checking your headphones. This takes a moment.</div>
+        <div style="font-size:15px;line-height:1.5;color:#9AA3A2"><span style="color:#E6EAE9">Starting</span><br>Getting ready to listen.</div>
+      </div>
+      <div style="display:grid;grid-template-columns:180px 1fr 1fr;gap:24px;padding:18px;background:#121617;border-radius:14px">
+        <div style="font-size:15px;color:#6FD3B8">Monitoring</div>
+        <div style="font-size:15px;line-height:1.5;color:#9AA3A2"><span style="color:#E6EAE9">Listening</span><br>This room is playing to your headphones. You can put the phone down and leave.</div>
+        <div style="font-size:15px;line-height:1.5;color:#9AA3A2"><span style="color:#E6EAE9">Listening</span><br>The room is playing to Buds Pro.</div>
+      </div>
+      <div style="display:grid;grid-template-columns:180px 1fr 1fr;gap:24px;padding:18px;background:#141110;border-radius:14px">
+        <div style="font-size:15px;color:#F2B45C">Paused<br><span style="font-size:13px;color:#9AA3A2">headphones</span></div>
+        <div style="font-size:15px;line-height:1.5;color:#9AA3A2"><span style="color:#E6EAE9">Paused · Bluetooth headphones disconnected.</span><br>Reconnect your headphones and listening continues on its own.</div>
+        <div style="font-size:15px;line-height:1.5;color:#9AA3A2"><span style="color:#E6EAE9">Paused — headphones disconnected</span><br>You are not hearing the room. Reconnect your headphones to continue.</div>
+      </div>
+      <div style="display:grid;grid-template-columns:180px 1fr 1fr;gap:24px;padding:18px;background:#141110;border-radius:14px">
+        <div style="font-size:15px;color:#F2B45C">Paused<br><span style="font-size:13px;color:#9AA3A2">phone call</span></div>
+        <div style="font-size:15px;line-height:1.5;color:#9AA3A2"><span style="color:#E6EAE9">Paused · A phone call is in progress.</span><br>Listening continues by itself when the call ends.</div>
+        <div style="font-size:15px;line-height:1.5;color:#9AA3A2"><span style="color:#E6EAE9">Paused — phone call in progress</span><br>You are not hearing the room. Listening continues when the call ends.</div>
+      </div>
+      <div style="display:grid;grid-template-columns:180px 1fr 1fr;gap:24px;padding:18px;background:#141110;border-radius:14px">
+        <div style="font-size:15px;color:#F2B45C">Paused<br><span style="font-size:13px;color:#9AA3A2">audio interrupted</span></div>
+        <div style="font-size:15px;line-height:1.5;color:#9AA3A2"><span style="color:#E6EAE9">Paused · Another app is playing sound to your headphones.</span><br>Stop that app and listening continues by itself.</div>
+        <div style="font-size:15px;line-height:1.5;color:#9AA3A2"><span style="color:#E6EAE9">Paused — another app is using the audio</span><br>You are not hearing the room. Stop that app to continue.</div>
+      </div>
+      <div style="display:grid;grid-template-columns:180px 1fr 1fr;gap:24px;padding:18px;background:#141110;border-radius:14px">
+        <div style="font-size:15px;color:#F2B45C">Paused<br><span style="font-size:13px;color:#9AA3A2">microphone in use</span></div>
+        <div style="font-size:15px;line-height:1.5;color:#9AA3A2"><span style="color:#E6EAE9">Paused · Another app is using the microphone.</span><br>Close that app and listening continues by itself.</div>
+        <div style="font-size:15px;line-height:1.5;color:#9AA3A2"><span style="color:#E6EAE9">Paused — another app is using the microphone</span><br>You are not hearing the room. Close that app to continue.</div>
+      </div>
+      <div style="display:grid;grid-template-columns:180px 1fr 1fr;gap:24px;padding:18px;background:#1A100F;border-radius:14px">
+        <div style="font-size:15px;color:#FF9A8F">Error</div>
+        <div style="font-size:15px;line-height:1.5;color:#9AA3A2"><span style="color:#E6EAE9">Stopped · The microphone could not be opened.</span><br>You are not hearing the room. Tap Listen to try again.</div>
+        <div style="font-size:15px;line-height:1.5;color:#9AA3A2"><span style="color:#E6EAE9">Stopped — the microphone could not be opened</span><br>You are not hearing the room. Open RemoteEar to try again.</div>
+      </div>
+      <div style="display:grid;grid-template-columns:180px 1fr 1fr;gap:24px;padding:18px;background:#121617;border-radius:14px">
+        <div style="font-size:15px;color:#C9D0CF">Permission<br><span style="font-size:13px;color:#9AA3A2">not granted</span></div>
+        <div style="font-size:15px;line-height:1.5;color:#9AA3A2"><span style="color:#E6EAE9">Microphone access needed</span><br>RemoteEar plays this room to your headphones, live. It cannot do that without the microphone. Nothing is recorded, saved, or sent anywhere — the app has no internet access.</div>
+        <div style="font-size:15px;line-height:1.5;color:#6E7877">No notification.</div>
+      </div>
+      <div style="display:grid;grid-template-columns:180px 1fr 1fr;gap:24px;padding:18px;background:#121617;border-radius:14px">
+        <div style="font-size:15px;color:#C9D0CF">No headphones</div>
+        <div style="font-size:15px;line-height:1.5;color:#9AA3A2"><span style="color:#E6EAE9">Listen · Connect headphones first</span><br>Connect the earbud you'll be carrying. RemoteEar plays only to headphones, never to the speaker.</div>
+        <div style="font-size:15px;line-height:1.5;color:#6E7877">No notification.</div>
+      </div>
+    </div>
+    <div style="font-size:14px;line-height:1.6;color:#6E7877;max-width:760px;text-wrap:pretty">Rules behind the wording: every paused and error line opens with the consequence (<span style="color:#C9D0CF">you are not hearing the room</span>) before the cause; no word implies the app is watching, detecting or alerting; nothing is ever described as "connected" when audio is not flowing.</div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:28px">
+    <div style="display:flex;align-items:baseline;gap:16px;border-bottom:1px solid #23292a;padding-bottom:12px">
+      <div style="font-family:'Roboto Mono',monospace;font-size:12px;color:#6FD3B8">04</div>
+      <div style="font-size:22px;font-weight:400">Colour tokens</div>
+      <div style="font-size:14px;color:#6E7877">state hues differ in lightness as well as hue, so they survive deuteranopia and a dimmed screen</div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:48px">
+      <div style="display:flex;flex-direction:column;gap:14px;width:520px">
+        <div style="font-family:'Roboto Mono',monospace;font-size:12px;color:#9AA3A2">DARK — PRIMARY</div>
+        <div style="display:flex;flex-direction:column;gap:8px;font-family:'Roboto Mono',monospace;font-size:13px">
+          <div style="display:flex;align-items:center;gap:14px"><div style="width:56px;height:34px;border-radius:8px;background:#0E1112;border:1px solid #23292a"></div><div style="flex:1;color:#C9D0CF">surface</div><div style="color:#6E7877">#0E1112</div></div>
+          <div style="display:flex;align-items:center;gap:14px"><div style="width:56px;height:34px;border-radius:8px;background:#151A1B"></div><div style="flex:1;color:#C9D0CF">surfaceContainer</div><div style="color:#6E7877">#151A1B</div></div>
+          <div style="display:flex;align-items:center;gap:14px"><div style="width:56px;height:34px;border-radius:8px;background:#232B2C"></div><div style="flex:1;color:#C9D0CF">surfaceContainerHigh · stop button</div><div style="color:#6E7877">#232B2C</div></div>
+          <div style="display:flex;align-items:center;gap:14px"><div style="width:56px;height:34px;border-radius:8px;background:#E6EAE9"></div><div style="flex:1;color:#C9D0CF">onSurface</div><div style="color:#6E7877">#E6EAE9</div></div>
+          <div style="display:flex;align-items:center;gap:14px"><div style="width:56px;height:34px;border-radius:8px;background:#9AA3A2"></div><div style="flex:1;color:#C9D0CF">onSurfaceVariant · 7.1:1</div><div style="color:#6E7877">#9AA3A2</div></div>
+          <div style="display:flex;align-items:center;gap:14px"><div style="width:56px;height:34px;border-radius:8px;background:#6FD3B8"></div><div style="flex:1;color:#C9D0CF">primary · listening · 10.4:1</div><div style="color:#6E7877">#6FD3B8</div></div>
+          <div style="display:flex;align-items:center;gap:14px"><div style="width:56px;height:34px;border-radius:8px;background:#04211B"></div><div style="flex:1;color:#C9D0CF">onPrimary</div><div style="color:#6E7877">#04211B</div></div>
+          <div style="display:flex;align-items:center;gap:14px"><div style="width:56px;height:34px;border-radius:8px;background:#F2B45C"></div><div style="flex:1;color:#C9D0CF">paused · 9.6:1</div><div style="color:#6E7877">#F2B45C</div></div>
+          <div style="display:flex;align-items:center;gap:14px"><div style="width:56px;height:34px;border-radius:8px;background:#FF9A8F"></div><div style="flex:1;color:#C9D0CF">error · 8.2:1</div><div style="color:#6E7877">#FF9A8F</div></div>
+          <div style="display:flex;align-items:center;gap:14px"><div style="width:56px;height:34px;border-radius:8px;background:#3A1512"></div><div style="flex:1;color:#C9D0CF">errorContainer</div><div style="color:#6E7877">#3A1512</div></div>
+          <div style="display:flex;align-items:center;gap:14px"><div style="width:56px;height:34px;border-radius:8px;background:#8C9694"></div><div style="flex:1;color:#C9D0CF">neutral state · idle, unknown</div><div style="color:#6E7877">#8C9694</div></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px;width:520px">
+        <div style="font-family:'Roboto Mono',monospace;font-size:12px;color:#9AA3A2">LIGHT — SECONDARY</div>
+        <div style="display:flex;flex-direction:column;gap:8px;font-family:'Roboto Mono',monospace;font-size:13px">
+          <div style="display:flex;align-items:center;gap:14px"><div style="width:56px;height:34px;border-radius:8px;background:#F7FAF9"></div><div style="flex:1;color:#C9D0CF">surface</div><div style="color:#6E7877">#F7FAF9</div></div>
+          <div style="display:flex;align-items:center;gap:14px"><div style="width:56px;height:34px;border-radius:8px;background:#EBF0EE"></div><div style="flex:1;color:#C9D0CF">surfaceContainer</div><div style="color:#6E7877">#EBF0EE</div></div>
+          <div style="display:flex;align-items:center;gap:14px"><div style="width:56px;height:34px;border-radius:8px;background:#DDE4E2"></div><div style="flex:1;color:#C9D0CF">surfaceContainerHigh · stop button</div><div style="color:#6E7877">#DDE4E2</div></div>
+          <div style="display:flex;align-items:center;gap:14px"><div style="width:56px;height:34px;border-radius:8px;background:#171D1C"></div><div style="flex:1;color:#C9D0CF">onSurface</div><div style="color:#6E7877">#171D1C</div></div>
+          <div style="display:flex;align-items:center;gap:14px"><div style="width:56px;height:34px;border-radius:8px;background:#4A5453"></div><div style="flex:1;color:#C9D0CF">onSurfaceVariant · 7.6:1</div><div style="color:#6E7877">#4A5453</div></div>
+          <div style="display:flex;align-items:center;gap:14px"><div style="width:56px;height:34px;border-radius:8px;background:#00695B"></div><div style="flex:1;color:#C9D0CF">primary · listening · 5.7:1</div><div style="color:#6E7877">#00695B</div></div>
+          <div style="display:flex;align-items:center;gap:14px"><div style="width:56px;height:34px;border-radius:8px;background:#FFFFFF"></div><div style="flex:1;color:#C9D0CF">onPrimary</div><div style="color:#6E7877">#FFFFFF</div></div>
+          <div style="display:flex;align-items:center;gap:14px"><div style="width:56px;height:34px;border-radius:8px;background:#7A4A00"></div><div style="flex:1;color:#C9D0CF">paused · 6.6:1</div><div style="color:#6E7877">#7A4A00</div></div>
+          <div style="display:flex;align-items:center;gap:14px"><div style="width:56px;height:34px;border-radius:8px;background:#B3261E"></div><div style="flex:1;color:#C9D0CF">error · 6.1:1</div><div style="color:#6E7877">#B3261E</div></div>
+          <div style="display:flex;align-items:center;gap:14px"><div style="width:56px;height:34px;border-radius:8px;background:#FFDAD5"></div><div style="flex:1;color:#C9D0CF">errorContainer</div><div style="color:#6E7877">#FFDAD5</div></div>
+          <div style="display:flex;align-items:center;gap:14px"><div style="width:56px;height:34px;border-radius:8px;background:#5C6564"></div><div style="flex:1;color:#C9D0CF">neutral state · idle, unknown</div><div style="color:#6E7877">#5C6564</div></div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:24px;max-width:1120px">
+      <div style="flex:1;min-width:320px;background:#121617;border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:15px;color:#E6EAE9">Colour-blind check</div>
+        <div style="font-size:14px;line-height:1.6;color:#9AA3A2;text-wrap:pretty">Teal and amber collapse toward each other under deuteranopia, so no state is identified by dot colour alone: listening is a ring with a filled centre, paused is two bars, error is a filled circle with a mark, idle is a hollow ring. State text sits at 34 px next to it.</div>
+      </div>
+      <div style="flex:1;min-width:320px;background:#121617;border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:15px;color:#E6EAE9">How dim Listening can go</div>
+        <div style="font-size:14px;line-height:1.6;color:#9AA3A2;text-wrap:pretty">After 20 s without touch the screen drops to a black surface with the state text at #3E8C7D and Stop at #5C6564 — roughly 5:1 and 4.6:1 on black, still legible at the lowest system brightness while emitting about a tenth of the light of the normal state. Nothing below the Stop button is drawn. Any touch restores the full screen.</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:28px">
+    <div style="display:flex;align-items:baseline;gap:16px;border-bottom:1px solid #23292a;padding-bottom:12px">
+      <div style="font-family:'Roboto Mono',monospace;font-size:12px;color:#6FD3B8">05</div>
+      <div style="font-size:22px;font-weight:400">The app icon</div>
+      <div style="font-size:14px;color:#6E7877">adaptive · 108 dp with a 72 dp safe zone · vector shapes only, no dependencies</div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="width:216px;height:216px;border-radius:48px;background:#0E1512;display:flex;align-items:center;justify-content:center;overflow:hidden">
+          <div style="width:150px;height:150px;border-radius:50%;border:4px solid #1F4A41;display:flex;align-items:center;justify-content:center">
+            <div style="width:104px;height:104px;border-radius:50%;border:4px solid #3E8C7D;display:flex;align-items:center;justify-content:center">
+              <div style="width:58px;height:58px;border-radius:50%;background:#6FD3B8"></div>
+            </div>
+          </div>
+        </div>
+        <div style="font-family:'Roboto Mono',monospace;font-size:12px;color:#6E7877">squircle mask · full colour</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="width:216px;height:216px;border-radius:50%;background:#0E1512;display:flex;align-items:center;justify-content:center;overflow:hidden">
+          <div style="width:150px;height:150px;border-radius:50%;border:4px solid #1F4A41;display:flex;align-items:center;justify-content:center">
+            <div style="width:104px;height:104px;border-radius:50%;border:4px solid #3E8C7D;display:flex;align-items:center;justify-content:center">
+              <div style="width:58px;height:58px;border-radius:50%;background:#6FD3B8"></div>
+            </div>
+          </div>
+        </div>
+        <div style="font-family:'Roboto Mono',monospace;font-size:12px;color:#6E7877">circle mask</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="width:216px;height:216px;border-radius:48px;background:#E6EAE9;display:flex;align-items:center;justify-content:center;overflow:hidden">
+          <div style="width:150px;height:150px;border-radius:50%;border:4px solid #B7C0BE;display:flex;align-items:center;justify-content:center">
+            <div style="width:104px;height:104px;border-radius:50%;border:4px solid #5C6564;display:flex;align-items:center;justify-content:center">
+              <div style="width:58px;height:58px;border-radius:50%;background:#171D1C"></div>
+            </div>
+          </div>
+        </div>
+        <div style="font-family:'Roboto Mono',monospace;font-size:12px;color:#6E7877">monochrome · themed icons</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;align-items:flex-end;gap:20px">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+            <div style="width:96px;height:96px;border-radius:22px;background:#0E1512;display:flex;align-items:center;justify-content:center">
+              <div style="width:66px;height:66px;border-radius:50%;border:2px solid #1F4A41;display:flex;align-items:center;justify-content:center">
+                <div style="width:46px;height:46px;border-radius:50%;border:2px solid #3E8C7D;display:flex;align-items:center;justify-content:center">
+                  <div style="width:26px;height:26px;border-radius:50%;background:#6FD3B8"></div>
+                </div>
+              </div>
+            </div>
+            <div style="font-family:'Roboto Mono',monospace;font-size:11px;color:#6E7877">96</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+            <div style="width:48px;height:48px;border-radius:11px;background:#0E1512;display:flex;align-items:center;justify-content:center">
+              <div style="width:33px;height:33px;border-radius:50%;border:1px solid #1F4A41;display:flex;align-items:center;justify-content:center">
+                <div style="width:23px;height:23px;border-radius:50%;border:1px solid #3E8C7D;display:flex;align-items:center;justify-content:center">
+                  <div style="width:13px;height:13px;border-radius:50%;background:#6FD3B8"></div>
+                </div>
+              </div>
+            </div>
+            <div style="font-family:'Roboto Mono',monospace;font-size:11px;color:#6E7877">48</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+            <div style="width:24px;height:24px;border-radius:6px;background:#0E1512;display:flex;align-items:center;justify-content:center">
+              <div style="width:16px;height:16px;border-radius:50%;border:1px solid #3E8C7D;display:flex;align-items:center;justify-content:center">
+                <div style="width:8px;height:8px;border-radius:50%;background:#6FD3B8"></div>
+              </div>
+            </div>
+            <div style="font-family:'Roboto Mono',monospace;font-size:11px;color:#6E7877">24 · status bar</div>
+          </div>
+        </div>
+        <div style="font-size:14px;line-height:1.6;color:#9AA3A2;max-width:420px;text-wrap:pretty">A sound field rather than an ear, a microphone or an eye: concentric rings around a filled centre, the room and the point you are listening from. It reads at 24 px, holds up in monochrome, and carries no surveillance language. The outer ring drops out at the smallest size; the two inner shapes are the icon.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body></html>
