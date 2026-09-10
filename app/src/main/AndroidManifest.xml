@@ -1,12 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Phase 2 needs exactly one permission.
-         Deliberately absent: FOREGROUND_SERVICE / FOREGROUND_SERVICE_MICROPHONE and
-         POST_NOTIFICATIONS, which Phase 3 adds with the monitoring service; and
-         INTERNET, which this app must never request - its absence is what makes
-         "audio never leaves the phone" verifiable. See docs/adr/0007-minimal-permission-set.md -->
+    <!-- The complete permission set. Four, and no more without an ADR.
+         Deliberately absent: INTERNET (never - its absence is what makes "audio never leaves the
+         phone" verifiable), any BLUETOOTH permission (device *types* are readable from
+         AudioManager.getDevices() without one), location, WAKE_LOCK,
+         REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, RECEIVE_BOOT_COMPLETED, and MODIFY_AUDIO_SETTINGS -
+         that last one is only needed by the communication-path APIs ADR-0004 forbids, so wanting it
+         is a signal something has gone wrong. See docs/adr/0007-minimal-permission-set.md -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:allowBackup="true"
@@ -15,6 +20,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.RemoteEar">
+
         <activity
             android:name=".MainActivity"
             android:exported="true">
@@ -23,6 +29,15 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- exported=false: otherwise any app could start the user's microphone.
+             No BOOT_COMPLETED receiver - monitoring is only ever started by a person in a
+             visible app, which the platform also enforces. -->
+        <service
+            android:name=".monitor.MonitoringService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+
     </application>
 
 </manifest>

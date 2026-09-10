@@ -53,6 +53,19 @@ Wanted in the first release if the must-haves land cleanly. None of these block 
 | S2 | Underrun, drift and lag counters, with periodic log summaries | The diagnostic surface for Scenario G. Needed to *understand* the product, not to run it |
 | S3 | `MIC` versus `UNPROCESSED` input toggle | Resolves [H4](feasibility.md) on real hardware. May become a must if `MIC` processing gates quiet room sound |
 | S4 | Software microphone gain with a limiter | Genuinely useful for hearing a quiet room, but `setVolume()` covers the basic case and gain risks clipping |
+| S7 | **Platform noise suppression as a default-off toggle** — *added 2026-09-10, and shipped early in Phase 3* | See the caveat below |
+
+**S7 needs its caveat recorded, because it cuts against the product.** `NoiseSuppressor` is the same
+mechanism as [risk R2](risks.md): suppressors are tuned to isolate a near-field talker and discard
+ambient sound, but here **the ambient sound is the signal** — breathing, rustling, a distant
+whimper. So it ships **off by default**, labelled as an experiment to A/B in a quiet room, and
+guarded by `NoiseSuppressor.isAvailable()`.
+
+It is deliberately *not* presented as a recommended setting, and it does not replace S4: if the goal
+is "hear the child more clearly", **gain is the right lever and suppression is the wrong one**. If
+measurement shows it degrades quiet-room audio, the honest response is to remove it rather than bury
+it in a settings screen. That would need an ADR either way, since [L3](#later) had scheduled
+filtering for after the core monitor was proven.
 | S5 | Detect a session that ended without the user stopping it, and say so afterwards | The honest mitigation for OEM process kills ([R1](risks.md)) |
 | ~~S6~~ | ~~Surface "microphone taken by another app" as a distinct state~~ | **Promoted to M15** — the failure turned out to be silent, so a generic error was not merely coarse, it was absent |
 

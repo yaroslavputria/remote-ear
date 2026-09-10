@@ -1,4 +1,4 @@
-package com.yputria.remoteear.proto
+package com.yputria.remoteear.monitor
 
 import android.media.AudioAttributes
 import android.media.AudioDeviceInfo
@@ -8,6 +8,7 @@ import android.media.AudioRecord
 import android.media.AudioRecordingConfiguration
 import android.media.AudioTrack
 import android.media.MediaRecorder
+import android.media.audiofx.NoiseSuppressor
 import android.os.Build
 import android.os.Process
 import android.util.Log
@@ -15,13 +16,14 @@ import java.util.concurrent.Executor
 import kotlin.math.max
 
 /**
- * PHASE 2 PROTOTYPE - deliberately disposable.
+ * The capture-to-playback pipeline. Owned by [MonitoringService] - nothing else may start it,
+ * because microphone access depends on the service being in the foreground.
  *
- * Its only job is to answer the project's go/no-go question: can the phone's built-in microphone
- * be heard through Bluetooth headphones from another room? Phase 3 moves this pipeline into a
- * foreground service and Phase 4 replaces the UI; this class is expected to be rewritten.
+ * Proven on hardware in Phase 2: the phone's built-in microphone was audible in a Bluetooth earbud
+ * from another room, routed BUILTIN_MIC -> BLUETOOTH_A2DP with no SCO.
+ * See docs/test-runs/2026-09-09-oneplus-cph2399.md.
  *
- * What is NOT disposable is the set of invariants it demonstrates:
+ * The invariants it enforces:
  *  - media path only, never the communication path (docs/adr/0004-media-path-only.md)
  *  - both ends pinned by device, and the *actual* routing asserted afterwards
  *  - 48 kHz mono PCM 16-bit, no resampling (docs/adr/0006-audio-format-and-buffering.md)
@@ -76,13 +78,14 @@ fun AudioManager.builtInMic(): AudioDeviceInfo? =
 fun AudioManager.supportsUnprocessed(): Boolean =
     getProperty(AudioManager.PROPERTY_SUPPORT_AUDIO_SOURCE_UNPROCESSED) == "true"
 
-class MonitorLoop(
+class AudioPipeline(
     private val audioManager: AudioManager,
     private val executor: Executor,
 ) {
     private var record: AudioRecord? = null
     private var track: AudioTrack? = null
     private var thread: Thread? = null
+    private var noiseSuppressor: NoiseSuppressor? = null
 
     @Volatile private var running = false
 
@@ -97,6 +100,7 @@ class MonitorLoop(
     @Volatile var loopError: String? = null; private set
     @Volatile var routedInType = -1; private set
     @Volatile var routedOutType = -1; private set
+    @Volatile var noiseSuppressionEnabled = false; private set
 
     val isRunning: Boolean get() = running
     val underrunCount: Int get() = track?.underrunCount ?: 0
@@ -196,6 +200,8 @@ class MonitorLoop(
         // Must be registered before capture starts.
         rec.registerAudioRecordingCallback(executor, recordingCallback)
 
+        attachNoiseSuppressor(rec)
+
         resetCounters()
         rec.startRecording()
         trk.play()
@@ -290,6 +296,8 @@ class MonitorLoop(
         runCatching { track?.stop() }
         thread?.join(1_000)
         thread = null
+        noiseSuppressor?.let { runCatching { it.release() } }
+        noiseSuppressor = null
         record?.let {
             runCatching { it.unregisterAudioRecordingCallback(recordingCallback) }
             it.release()
@@ -300,9 +308,43 @@ class MonitorLoop(
         Log.i(LOG_TAG, "monitor stopped: framesIn=$framesIn framesOut=$framesOut")
     }
 
-    /** 0f..1f per-track gain. Never touches system stream volume. */
+    /** 0f..1f per-track gain. Never touches system stream volume - that is a global setting. */
     fun setVolume(volume: Float) {
         track?.setVolume(volume.coerceIn(0f, 1f))
+    }
+
+    /**
+     * Optional platform noise suppression on the capture session. **Default off, deliberately.**
+     *
+     * This is the same mechanism as [risk R2](../../../../../../docs/risks.md): suppressors are
+     * tuned to isolate a near-field talker and discard ambient sound, but for a baby monitor the
+     * ambient sound *is* the signal - breathing, rustling, a distant whimper. Enabling it may
+     * suppress exactly what the user is listening for, so it is a user-visible experiment to A/B on
+     * hardware, never a silent default.
+     *
+     * Note this effect is attached to the `MIC` capture session and is unrelated to
+     * [AcousticEchoCanceler], which docs/adr/0008-sleep-sound-deferred.md addresses separately.
+     */
+    fun setNoiseSuppression(enabled: Boolean) {
+        noiseSuppressionEnabled = enabled
+        runCatching { noiseSuppressor?.enabled = enabled }
+            .onFailure { Log.w(LOG_TAG, "could not toggle NoiseSuppressor: ${it.message}") }
+        Log.i(LOG_TAG, "noise suppression -> $enabled")
+    }
+
+    private fun attachNoiseSuppressor(rec: AudioRecord) {
+        if (!isNoiseSuppressionAvailable()) {
+            Log.i(LOG_TAG, "NoiseSuppressor unavailable on this device")
+            return
+        }
+        noiseSuppressor = runCatching { NoiseSuppressor.create(rec.audioSessionId) }
+            .onFailure { Log.w(LOG_TAG, "NoiseSuppressor.create failed: ${it.message}") }
+            .getOrNull()
+        runCatching { noiseSuppressor?.enabled = noiseSuppressionEnabled }
+        Log.i(
+            LOG_TAG,
+            "NoiseSuppressor attached=${noiseSuppressor != null} enabled=$noiseSuppressionEnabled",
+        )
     }
 
     fun statsLine(): String {
@@ -341,3 +383,7 @@ class MonitorLoop(
         }
     }
 }
+
+/** Whether the platform offers noise suppression at all. Device-dependent. */
+fun isNoiseSuppressionAvailable(): Boolean = runCatching { NoiseSuppressor.isAvailable() }
+    .getOrDefault(false)

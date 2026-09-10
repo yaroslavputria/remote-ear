@@ -3,11 +3,13 @@ package com.yputria.remoteear
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.media.AudioDeviceCallback
+import android.media.AudioDeviceInfo
 import android.media.AudioManager
+import android.os.Build
 import android.os.Bundle
-import android.util.Log
-import android.view.WindowManager
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -24,106 +26,107 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import com.yputria.remoteear.proto.InputSource
-import com.yputria.remoteear.proto.LOG_TAG
-import com.yputria.remoteear.proto.MonitorLoop
-import com.yputria.remoteear.proto.StartOutcome
-import com.yputria.remoteear.proto.deviceTypeName
-import com.yputria.remoteear.proto.supportsUnprocessed
-import com.yputria.remoteear.proto.usableBluetoothSinks
+import com.yputria.remoteear.monitor.InputSource
+import com.yputria.remoteear.monitor.MonitorNotification
+import com.yputria.remoteear.monitor.MonitorState
+import com.yputria.remoteear.monitor.MonitoringService
+import com.yputria.remoteear.monitor.deviceTypeName
+import com.yputria.remoteear.monitor.isNoiseSuppressionAvailable
+import com.yputria.remoteear.monitor.supportsUnprocessed
+import com.yputria.remoteear.monitor.usableBluetoothSinks
 import com.yputria.remoteear.theme.RemoteEarTheme
-import kotlinx.coroutines.delay
-import java.util.concurrent.Executors
 
 /**
- * PHASE 2 PROTOTYPE - deliberately disposable. Phase 4 replaces this with a real Compose UI
- * driven by a ViewModel over a StateFlow; this screen exists only to drive [MonitorLoop] and
- * show the evidence needed for the go/no-go gate.
+ * PHASE 3 SCREEN - still deliberately plain. Phase 4 replaces it with the designed UI from
+ * docs/design-brief.md, driven by a ViewModel.
+ *
+ * What changed from Phase 2: this no longer owns the audio pipeline. It starts and stops
+ * [MonitoringService] and *observes* its state, because microphone access in the background
+ * requires the service to be the owner. Note there is no longer any FLAG_KEEP_SCREEN_ON - the
+ * service is what keeps monitoring alive now, and needing the screen on would defeat the point.
  */
 class MainActivity : ComponentActivity() {
 
-    private val executor = Executors.newSingleThreadExecutor()
-    private lateinit var audioManager: AudioManager
-    private lateinit var monitor: MonitorLoop
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // Test integrity, not a feature: there is no foreground service until Phase 3, so a
-        // screen timeout would silently kill capture and read as "the audio path failed".
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-
-        audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        monitor = MonitorLoop(audioManager, executor)
-
         setContent {
             RemoteEarTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    ProtoScreen(audioManager, monitor)
+                    MonitorScreen()
                 }
             }
         }
     }
-
-    override fun onDestroy() {
-        monitor.stop()
-        executor.shutdown()
-        super.onDestroy()
-    }
 }
 
 @Composable
-private fun ProtoScreen(audioManager: AudioManager, monitor: MonitorLoop) {
+private fun MonitorScreen() {
     val context = LocalContext.current
-    var hasMicPermission by remember {
+    val audioManager = remember {
+        context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    }
+
+    val state by MonitoringService.state.collectAsState()
+    val stats by MonitoringService.stats.collectAsState()
+    val endedUnexpectedly by MonitoringService.endedUnexpectedly.collectAsState()
+    val volume by MonitoringService.volume.collectAsState()
+    val noiseSuppression by MonitoringService.noiseSuppression.collectAsState()
+
+    var hasMic by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
                 PackageManager.PERMISSION_GRANTED,
         )
     }
-    val permissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+    var notificationsRequested by remember { mutableStateOf(false) }
+    var inputSource by remember { mutableStateOf(InputSource.Mic) }
+
+    val micLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
-    ) { granted -> hasMicPermission = granted }
+    ) { granted -> hasMic = granted }
+
+    val notificationLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { notificationsRequested = true }
 
     val unprocessedSupported = remember { audioManager.supportsUnprocessed() }
-    var inputSource by remember { mutableStateOf(InputSource.Mic) }
-    var running by remember { mutableStateOf(false) }
-    var volume by remember { mutableStateOf(1f) }
-    var status by remember { mutableStateOf("idle") }
-    var stats by remember { mutableStateOf("") }
-    var routing by remember { mutableStateOf("") }
+    val noiseSuppressionAvailable = remember { isNoiseSuppressionAvailable() }
 
-    // Bluetooth sinks are read on each recomposition; a proper AudioDeviceCallback arrives in
-    // Phase 4 along with the real status UI.
-    val sinks = audioManager.usableBluetoothSinks()
-
-    LaunchedEffect(running) {
-        var tick = 0
-        while (running) {
-            stats = monitor.statsLine()
-            // Every ~10 s, never per frame.
-            if (tick % 10 == 0) Log.i(LOG_TAG, "stats: $stats")
-            monitor.loopError?.let {
-                status = "loop failed: $it"
-                monitor.stop()
-                running = false
+    // Live Bluetooth presence. Recomputing this only on recomposition would leave the Listen
+    // button stale when headphones connect or disconnect - so it is driven by the audio system's
+    // own callback, which also needs no Bluetooth permission.
+    var sinks by remember { mutableStateOf(audioManager.usableBluetoothSinks()) }
+    DisposableEffect(audioManager) {
+        val callback = object : AudioDeviceCallback() {
+            override fun onAudioDevicesAdded(added: Array<out AudioDeviceInfo>?) {
+                sinks = audioManager.usableBluetoothSinks()
             }
-            tick++
-            delay(1_000)
+
+            override fun onAudioDevicesRemoved(removed: Array<out AudioDeviceInfo>?) {
+                sinks = audioManager.usableBluetoothSinks()
+            }
         }
+        audioManager.registerAudioDeviceCallback(callback, null)
+        onDispose { audioManager.unregisterAudioDeviceCallback(callback) }
     }
+
+    val isActive = state is MonitorState.Monitoring || state is MonitorState.Starting
+    val canListen = hasMic && sinks.isNotEmpty()
 
     Column(
         modifier = Modifier
@@ -133,84 +136,141 @@ private fun ProtoScreen(audioManager: AudioManager, monitor: MonitorLoop) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text("RemoteEar", style = MaterialTheme.typography.headlineMedium)
-        Text("Phase 2 prototype - proves mic -> Bluetooth only", style = MaterialTheme.typography.bodySmall)
+        Text(
+            "Phase 3 - monitoring runs in a foreground service",
+            style = MaterialTheme.typography.bodySmall,
+        )
 
         Spacer(Modifier.height(4.dp))
 
-        Text("Microphone permission: ${if (hasMicPermission) "granted" else "NOT granted"}")
-        if (!hasMicPermission) {
+        // State first: this is the safety-relevant information.
+        Text(MonitorNotification.title(state), style = MaterialTheme.typography.titleMedium)
+        Text(MonitorNotification.detail(state), style = MaterialTheme.typography.bodyMedium)
+
+        if (endedUnexpectedly) {
+            Text(
+                "Monitoring stopped on its own last time. Some phones shut down background apps " +
+                    "to save battery — allowing RemoteEar to run in the background in your system " +
+                    "settings may prevent it.",
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Button(onClick = { MonitoringService.acknowledgeUnexpectedEnd() }) { Text("Dismiss") }
+        }
+
+        Spacer(Modifier.height(4.dp))
+
+        Text("Microphone permission: ${if (hasMic) "granted" else "NOT granted"}")
+        if (!hasMic) {
             Text(
                 "RemoteEar needs the microphone so you can hear this room through your headphones. " +
                     "Audio is never recorded or sent anywhere.",
                 style = MaterialTheme.typography.bodySmall,
             )
-            Button(onClick = { permissionLauncher.launch(Manifest.permission.RECORD_AUDIO) }) {
+            Button(onClick = { micLauncher.launch(Manifest.permission.RECORD_AUDIO) }) {
                 Text("Grant microphone access")
             }
         }
 
-        Text("Bluetooth output: ${if (sinks.isEmpty()) "none connected" else sinks.joinToString { deviceTypeName(it.type) }}")
+        Text(
+            "Bluetooth output: " +
+                if (sinks.isEmpty()) "none connected"
+                else sinks.joinToString { deviceTypeName(it.type) },
+        )
         Text("UNPROCESSED supported: $unprocessedSupported")
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(
                 selected = inputSource == InputSource.Mic,
-                onClick = { if (!running) inputSource = InputSource.Mic },
+                onClick = { inputSource = InputSource.Mic },
                 label = { Text("MIC") },
-                enabled = !running,
+                enabled = !isActive,
             )
             FilterChip(
                 selected = inputSource == InputSource.Unprocessed,
-                onClick = { if (!running) inputSource = InputSource.Unprocessed },
+                onClick = { inputSource = InputSource.Unprocessed },
                 label = { Text("UNPROCESSED") },
-                enabled = !running && unprocessedSupported,
+                enabled = !isActive && unprocessedSupported,
             )
         }
 
         Button(
-            enabled = hasMicPermission && (running || sinks.isNotEmpty()),
+            enabled = isActive || canListen,
             onClick = {
-                if (running) {
-                    monitor.stop()
-                    running = false
-                    status = "stopped"
-                    routing = ""
+                if (isActive) {
+                    MonitoringService.stop(context)
                 } else {
-                    when (val outcome = monitor.start(inputSource)) {
-                        is StartOutcome.Started -> {
-                            monitor.setVolume(volume)
-                            running = true
-                            status = "monitoring (${inputSource.label})"
-                            routing = "in=${deviceTypeName(monitor.routedInType)} " +
-                                "out=${deviceTypeName(monitor.routedOutType)}"
-                        }
-                        is StartOutcome.Failed -> {
-                            status = "FAILED: ${outcome.reason}"
-                            routing = ""
-                        }
+                    // Ask for notification permission before starting: without it the ongoing
+                    // notification is hidden, which is poor for an app holding the microphone.
+                    // It is a soft dependency though - denial does not block the service.
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                        !notificationsRequested &&
+                        ContextCompat.checkSelfPermission(
+                            context,
+                            Manifest.permission.POST_NOTIFICATIONS,
+                        ) != PackageManager.PERMISSION_GRANTED
+                    ) {
+                        notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                     }
+                    // Started from a visible Activity, with RECORD_AUDIO already granted - both
+                    // are hard platform requirements for a microphone foreground service.
+                    MonitoringService.start(context, inputSource)
                 }
             },
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text(if (running) "STOP" else "START")
+            Text(if (isActive) "Stop listening" else "Listen")
         }
 
-        Text("Status: $status")
-        if (routing.isNotEmpty()) Text("Routing: $routing")
+        // A disabled button should say why rather than just sitting there inert.
+        if (!isActive && !canListen) {
+            Text(
+                when {
+                    !hasMic -> "Grant microphone access to start listening."
+                    else -> "Connect your Bluetooth headphones to start listening."
+                },
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+
+        (state as? MonitorState.Monitoring)?.let {
+            Text(
+                "Routing: in=${deviceTypeName(it.routedInType)} out=${deviceTypeName(it.routedOutType)}",
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+
+        Spacer(Modifier.height(4.dp))
 
         Text("Output volume: ${(volume * 100).toInt()}%")
         Slider(
             value = volume,
-            onValueChange = {
-                volume = it
-                monitor.setVolume(it)
-            },
+            onValueChange = { MonitoringService.setVolume(it) },
         )
 
-        if (stats.isNotEmpty()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                if (noiseSuppressionAvailable) "Noise suppression" else "Noise suppression (unavailable)",
+            )
+            Switch(
+                checked = noiseSuppression,
+                onCheckedChange = { MonitoringService.setNoiseSuppression(it) },
+                enabled = noiseSuppressionAvailable,
+            )
+        }
+        Text(
+            "Off by default on purpose. Noise suppression is tuned to isolate a nearby voice and " +
+                "discard background sound — but here the background is what you want to hear. " +
+                "Try it both ways in a quiet room before leaving it on.",
+            style = MaterialTheme.typography.bodySmall,
+        )
+
+        stats?.let {
             Text("Counters", style = MaterialTheme.typography.titleSmall)
-            Text(stats, style = MaterialTheme.typography.bodySmall)
+            Text(it, style = MaterialTheme.typography.bodySmall)
         }
 
         Spacer(Modifier.height(8.dp))

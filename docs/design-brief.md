@@ -81,9 +81,16 @@ The brief specifies four, and the design should not add a fifth:
 
 ## Controls
 
-- **START / STOP** — one primary control. It is pressed in the dark, possibly half-asleep, so it
-  wants a **large, unambiguous target**. STOP must not be confusable with START at a glance.
-- **Output volume** — a slider. Affects only this app's playback.
+- **"Listen" / "Stop listening"** — one primary control. *(Label decided 2026-09-10; the brief's
+  sketch says START/STOP, but "Listen" says what the app does rather than what the software is
+  doing.)* It is pressed in the dark, possibly half-asleep, so it wants a **large, unambiguous
+  target**, and the stop state must not be confusable with the start state at a glance.
+- **The control is disabled when it cannot work** — no microphone permission, or no headphones
+  connected — and **says why** rather than sitting inert. Bluetooth presence is live, so it
+  enables and disables as headphones come and go.
+- **Output volume** — a slider. Affects only this app's playback, never the system volume.
+- **Noise suppression** — a toggle, **off by default**, needing a one-line explanation of why it may
+  make things *worse* here (see below). It should not look like a recommended setting.
 - **Microphone permission request** — with a short rationale shown *before* the system dialog.
 
 ## Reference sketch from the product brief
