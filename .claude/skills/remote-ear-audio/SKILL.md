@@ -51,6 +51,20 @@ code asks for it while trying to "make Bluetooth audio work".
 If a task seems to require any of these, **stop and say so** rather than working around ADR-0004.
 That ADR is the product requirement in brief §6, not a preference.
 
+### Requests that sound reasonable and are not
+
+These come up. All three need the forbidden path; answer them, do not implement them.
+
+| Request | Answer |
+|---|---|
+| "Use the earbud's microphone" | Only reachable over **HFP/SCO** — verified on device: Android exposes `bt_sco_hs`, `bt_sco_carkit`, `bt_a2dp`, `ble_headset`, and **A2DP is output-only**. SCO owns both directions and is narrowband mono |
+| "Use one earbud as mic, the other as speaker" | A TWS pair is **one** endpoint; left/right are not separately addressable. And the buds talk to the phone, not each other, so the phone must stay in the room anyway |
+| "Reverse it — earbud mic out of the phone speaker" | Needs `setCommunicationDevice()`, plus `MODIFY_AUDIO_SETTINGS` which ADR-0007 excludes, and dual-routing that is unverified. Investigated and rejected 2026-09-10 |
+
+All three were investigated with the reasoning recorded in
+[ADR-0004's alternatives](../../../docs/adr/0004-media-path-only.md). LE Audio could reopen the
+two-earbud idea one day; classic Bluetooth cannot.
+
 ## Correct construction
 
 ```kotlin

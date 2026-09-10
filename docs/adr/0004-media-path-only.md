@@ -108,6 +108,35 @@ AGC and noise suppression that fight the "natural environmental sound" priority 
 some OEMs drags routing onto the comms path. Optimising the MVP for a deferred feature's
 convenience is exactly the wrong direction.
 
+**Use one earbud as the microphone and the other as the speaker.** *(Proposed and rejected
+2026-09-10.)* An appealing idea — leave one bud near the child, wear the other, no phone in the room
+— and impossible for three independent reasons:
+
+1. A TWS pair presents to the phone as **one** Bluetooth endpoint. Left and right are not separately
+   addressable through any public Android API; the buds negotiate that between themselves.
+2. Any earbud microphone is reachable only over **HFP/SCO** — confirmed on the device, where the
+   only Bluetooth entries Android exposes are `bt_sco_hs`, `bt_sco_carkit`, `bt_a2dp` and
+   `ble_headset`, and **A2DP appears only as an output**. SCO is bidirectional and owns both
+   directions once active, so one bud cannot be on SCO while the other receives A2DP.
+3. Even if the profiles allowed it, the buds talk to the *phone*, not to each other. Both must stay
+   in phone range, so the phone still has to be near the child — which removes the entire benefit.
+
+**Reverse the direction: earbud microphone playing out of the phone speaker.** *(Proposed and
+rejected 2026-09-10.)* Technically possible, and it costs this decision. It needs
+`setCommunicationDevice()`/SCO, plus almost certainly `MODIFY_AUDIO_SETTINGS` which
+[ADR-0007](0007-minimal-permission-set.md) excludes; the result is narrowband mono, materially worse
+than the proven path; and routing output to the speaker while SCO capture is live is the same
+unverified dual-routing problem that blocks
+[ADR-0008](0008-sleep-sound-deferred.md). The product asymmetry settles it independently of the
+platform: the earbud has the worse microphone, a 4–6 hour battery, must stay in phone range, and
+would mean leaving a small battery-containing object in a child's room. The phone is the better
+listener in every respect.
+
+**Reconsider only if** LE Audio changes the picture — it is bidirectional by design and supports
+richer topologies, so the "two earbuds" idea is not permanently foreclosed by physics, only by
+today's Android API surface. That would need measurement on LE Audio hardware
+([H2](../feasibility.md)) and a new ADR.
+
 **Reconsider only if** measurement shows the media path cannot deliver the core use case on real
 hardware — the Phase 2 go/no-go gate in the [implementation plan](../implementation-plan.md). That
 would be a finding significant enough to reopen the product concept, not just this ADR.

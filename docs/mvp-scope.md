@@ -114,6 +114,17 @@ storage · AI · speech recognition · baby-cry classification · analytics invo
 features · any permission beyond the four in [android-constraints.md](android-constraints.md) ·
 complicated onboarding
 
+Also out of scope, having been **investigated and rejected on 2026-09-10**:
+
+- **Using one earbud as the microphone and the other as the speaker.** A TWS pair is a single
+  Bluetooth endpoint, an earbud microphone is reachable only over HFP/SCO (which owns both
+  directions), and the buds talk to the phone rather than to each other — so the phone would still
+  have to be in the room. Three independent blockers; see
+  [ADR-0004](adr/0004-media-path-only.md).
+- **The reverse direction — earbud microphone out of the phone speaker.** Possible, but it requires
+  the SCO path ADR-0004 forbids, yields narrowband mono, and inverts the product: the earbud has the
+  worse microphone, a 4–6 hour battery, and would be left in a child’s room.
+
 Two of these deserve a note, because they are the ones a well-meaning future change would reach for:
 
 - **Cry detection** (brief §11) is listed under future features there, but it is out of scope as a
