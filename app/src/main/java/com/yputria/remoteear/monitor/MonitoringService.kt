@@ -56,8 +56,6 @@ class MonitoringService : Service() {
 
         // Controls are collected rather than pushed, so the UI needs no binding and the settings
         // survive stop/start. Applied immediately, so a slider drag is not laggy.
-        scope.launch { volume.collect { pipeline.setVolume(it) } }
-
         // One user-facing control drives both mechanisms. At zero everything is off; above zero the
         // filter scales continuously and the platform suppressor - which has no level of its own -
         // is simply on.
@@ -216,15 +214,6 @@ class MonitoringService : Service() {
 
         fun acknowledgeUnexpectedEnd() {
             _endedUnexpectedly.value = false
-        }
-
-        private val _volume = MutableStateFlow(1f)
-
-        /** Per-track output gain, 0f..1f. Never the system stream volume. */
-        val volume: StateFlow<Float> = _volume.asStateFlow()
-
-        fun setVolume(value: Float) {
-            _volume.value = value.coerceIn(0f, 1f)
         }
 
         private val _noiseCancellation = MutableStateFlow(0f)

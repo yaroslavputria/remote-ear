@@ -88,12 +88,12 @@ The brief specifies four, and the design should not add a fifth:
 - **The control is disabled when it cannot work** — no microphone permission, or no headphones
   connected — and **says why** rather than sitting inert. Bluetooth presence is live, so it
   enables and disables as headphones come and go.
-- **Volume** — the phone’s own media volume already controls loudness, from the phone buttons and
-  from the earbud itself, because playback rides the media stream. The app therefore **shows** that
-  level and offers only a *trim* beneath it. Design should make the phone volume look like the real
-  control and the trim look secondary — a forgotten trim silently caps how loud the earbud can get.
-- **Noise cancellation** — a single slider, like volume, **off at the minimum**. One control, even
-  though two mechanisms sit underneath it (see [mvp-scope.md](mvp-scope.md) S7). High settings can
+- **Volume** — there is **no in-app volume control**. Loudness is the phone media volume, set from
+  the phone buttons or the earbud itself; the app only *displays* it. An app-side control could only
+  attenuate (see [mvp-scope.md](mvp-scope.md) M10), so design should show the level and say how to
+  change it rather than offering a slider.
+- **Noise cancellation** — a single slider, **off at the minimum**. The only slider on the screen, so
+  it carries no ambiguity with volume. Two mechanisms sit underneath it (see [mvp-scope.md](mvp-scope.md) S7). High settings can
   hide quiet sounds, so the label needs to avoid implying that more is better.
 - **Microphone permission request** — with a short rationale shown *before* the system dialog.
 

@@ -317,10 +317,16 @@ class AudioPipeline(
         Log.i(LOG_TAG, "monitor stopped: framesIn=$framesIn framesOut=$framesOut")
     }
 
-    /** 0f..1f per-track gain. Never touches system stream volume - that is a global setting. */
-    fun setVolume(volume: Float) {
-        track?.setVolume(volume.coerceIn(0f, 1f))
-    }
+    // Deliberately no volume control here. The track is left at unity gain, and loudness belongs
+    // to the phone's media volume - reachable from the phone's buttons and, via A2DP absolute
+    // volume, from the earbud itself, which is the only control the user can reach once the phone
+    // is in another room.
+    //
+    // An app-side AudioTrack.setVolume() would be worse than redundant: it caps at 1.0, so it can
+    // only ever *attenuate*. It cannot make a quiet room easier to hear - the complaint this
+    // product actually gets - while a forgotten setting would silently cap how loud the earbud can
+    // get. Making the room louder needs gain above unity plus a limiter, applied in the loop
+    // (mvp-scope.md S4), which is a different mechanism entirely.
 
     /**
      * Optional platform noise suppression on the capture session. **Default off, deliberately.**

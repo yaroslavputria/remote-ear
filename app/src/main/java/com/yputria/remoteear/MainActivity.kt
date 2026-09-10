@@ -86,7 +86,6 @@ private fun MonitorScreen() {
     val state by MonitoringService.state.collectAsState()
     val stats by MonitoringService.stats.collectAsState()
     val endedUnexpectedly by MonitoringService.endedUnexpectedly.collectAsState()
-    val volume by MonitoringService.volume.collectAsState()
     val noiseCancellation by MonitoringService.noiseCancellation.collectAsState()
 
     var hasMic by remember {
@@ -132,8 +131,8 @@ private fun MonitorScreen() {
     // A2DP absolute volume, the earbud's own buttons - already scale what the listener hears. This
     // is read-only on purpose. Android advises against setStreamVolume/adjustStreamVolume because
     // they change volume for *every* app, and docs/adr/0007-minimal-permission-set.md keeps us out
-    // of global audio state. Showing it is what makes the app slider comprehensible rather than a
-    // mysterious second control.
+    // of global audio state. There is no app-side volume at all: setVolume() caps at 1.0, so it
+    // could only ever attenuate - never help with the "too quiet" complaint this product gets.
     var systemVolume by remember { mutableStateOf(audioManager.streamMusicFraction()) }
     DisposableEffect(audioManager) {
         val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
@@ -263,25 +262,13 @@ private fun MonitorScreen() {
 
         Spacer(Modifier.height(4.dp))
 
-        Text("Phone volume: ${(systemVolume * 100).toInt()}%  (volume buttons / earbud)")
+        Text("Volume: ${(systemVolume * 100).toInt()}%")
         Text(
-            "Your phone's media volume already controls how loud this is — from the phone's " +
-                "buttons, or from the earbud itself. The slider below only trims below that.",
+            "Set with your phone's volume buttons, or from the earbud itself — the same media " +
+                "volume as music. There is no separate app volume, on purpose: a second control " +
+                "could only ever make this quieter.",
             style = MaterialTheme.typography.bodySmall,
         )
-
-        Text("App trim: ${(volume * 100).toInt()}%")
-        Slider(
-            value = volume,
-            onValueChange = { MonitoringService.setVolume(it) },
-        )
-        if (volume < 0.95f) {
-            Text(
-                "Trim is below full — the earbud cannot get louder than this even at maximum " +
-                    "phone volume.",
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
 
         Text(
             "Noise cancellation: " +

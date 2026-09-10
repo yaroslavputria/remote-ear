@@ -23,7 +23,7 @@ Non-negotiable. The app is not shippable without all of these.
 | M7 | Ongoing notification showing live state, with a `Stop` action | Platform requirement and the only status surface once the phone is in another room |
 | M8 | One clear Start/Stop control | Brief §4.7 |
 | M9 | Status for: microphone permission, monitoring state, Bluetooth availability, errors | Brief §4.8, exactly these four |
-| M10 | Output volume slider | Brief §10. `AudioTrack.setVolume()` |
+| M10 | Output volume | Brief §10 — satisfied by the **phone media volume**, which the app displays rather than duplicating. See below |
 | M11 | Pause — visibly, with a stated reason — on audio focus loss, phone call, or Bluetooth loss | Brief §16. A silent stop is the worst bug this product can have |
 | M12 | Assert actual routing after start and fail loudly if it is wrong | If `TYPE_BLUETOOTH_SCO` appears, the wrong microphone is live |
 | M13 | Tell the user plainly that audio is processed locally and never uploaded | Brief §12 |
@@ -42,6 +42,15 @@ reports "Monitoring" while relaying nothing. That is the same class of failure a
 platform provides `AudioRecord.registerAudioRecordingCallback()` +
 `AudioRecordingConfiguration.isClientSilenced()` at API 29, our `minSdk` floor, which makes it cheap
 as well as necessary.
+
+**M10 has no app-side slider, deliberately.** Playback rides `STREAM_MUSIC`, so the phone volume
+buttons and the earbud own controls already set loudness — and the earbud is the only control the
+user can reach once the phone is in another room. An app slider would be worse than redundant:
+`AudioTrack.setVolume()` caps at 1.0, so it could only ever *attenuate*, never help with the
+"too quiet" complaint this product actually gets, while a forgotten setting would silently cap how
+loud the earbud could get. The app therefore **shows** the phone volume and offers no second
+control. Making the room *louder* than it is needs gain above unity plus a limiter — S4, a different
+mechanism.
 
 ## Should have
 
