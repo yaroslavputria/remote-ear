@@ -45,3 +45,7 @@ That includes any consequence of relying on it as a monitoring device.
 ## Licence
 
 MIT. The full text ships with the source code.
+
+## Governing law
+
+These terms are governed by the law of Ukraine.

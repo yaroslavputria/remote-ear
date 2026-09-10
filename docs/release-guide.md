@@ -29,16 +29,20 @@ geometry as the launcher icon so the two cannot drift.
 
 ## Step 1 — Create the signing key (once, and never lose it)
 
+`keytool` ships with the JDK and is **not on this machine's `PATH`** — the same reason `./gradlew`
+needs `JAVA_HOME` set by hand here ([dev-setup.md](dev-setup.md)). Call it by its full path, from
+Git Bash, in the repo root:
+
 ```bash
-keytool -genkeypair -v \
+/c/jdk17/bin/keytool -genkeypair -v \
   -keystore remote-ear-release.jks \
   -alias remote-ear \
   -keyalg RSA -keysize 4096 -validity 10000 \
   -dname "CN=Yaroslav Putria, O=RemoteEar, C=UA"
 ```
 
-Adjust `C=` to your country. It will ask for a keystore password and a key password; use the same
-one for both unless you have a reason not to.
+It will ask for a keystore password and then whether to reuse it for the key — same password for
+both is fine.
 
 **Keep the `.jks` file and its passwords somewhere you will still have them in five years** — a
 password manager, not just this laptop. Even with Play App Signing (step 5) enabled, losing the
@@ -80,8 +84,8 @@ If you would rather not make the repository public, the alternative is any stati
 Gist, a Netlify drop, a page on a domain you own. What matters is that the URL is public, stable, and
 shows the same text the app shows.
 
-**Before you publish it, one thing needs a decision:** the terms have no governing-law clause.
-See [mvp-scope M16](mvp-scope.md#m16--the-two-documents).
+Both documents are final: the contact address is the author's, and the terms are governed by the law
+of Ukraine.
 
 ## Step 3 — Create the app in Play Console
 

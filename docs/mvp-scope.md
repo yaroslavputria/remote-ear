@@ -59,10 +59,10 @@ that it is **not a baby monitor, medical device or safety device**, and that it 
 only means of supervising anyone. That is not boilerplate; it is the honest counterpart to
 [risk R1](risks.md).
 
-The contact address is filled in. **There is deliberately no governing-law clause**: naming a
-jurisdiction would be a real legal choice, it protects the author only marginally for a free app
-with no accounts and no data, and an invented one would be worse than none. Add one line if that
-changes.
+The contact address is filled in, and the terms are **governed by the law of Ukraine** — named by the
+author on 2026-09-10, having first been left out rather than invented. It is one sentence, and for a
+free app with no accounts and no data it does little more than answer the question; naming the wrong
+country would have been worse than naming none.
 
 Play still wants the policy at a **public URL** in the store listing — the same file in this
 repository can serve as that. The Data Safety declaration is in [privacy.md](privacy.md).
