@@ -6,6 +6,7 @@ import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioRecord
 import android.media.AudioRecordingConfiguration
+import android.media.AudioTimestamp
 import android.media.AudioTrack
 import android.media.MediaRecorder
 import android.media.audiofx.NoiseSuppressor
@@ -36,6 +37,22 @@ const val LOG_TAG = "RemoteEar"
 private const val SAMPLE_RATE = 48_000
 private const val FRAMES_PER_BUFFER = 960 // ~20 ms of mono audio
 private const val FRAME_BYTES = FRAMES_PER_BUFFER * 2 // PCM 16-bit
+
+/** Drift is checked once a second: 50 frames of 20 ms. Never per frame. */
+private const val DRIFT_CHECK_FRAMES = 50L
+
+/**
+ * At most one 20 ms correction per minute of audio.
+ *
+ * Clock drift at 100 ppm needs roughly one correction every three minutes, so this is generous
+ * headroom - and far below the rate at which a listener would notice. If the counters ever show
+ * corrections firing at the cap while the backlog still grows, the coarse approach has run out and
+ * the answer is a resampler, which needs its own ADR.
+ */
+private const val CORRECTION_MIN_FRAMES = SAMPLE_RATE.toLong() * 60
+
+/** 100 ms of accumulated delay before a frame is dropped. Well past normal jitter. */
+private const val BACKLOG_DROP_FRAMES = SAMPLE_RATE.toLong() / 10
 
 /** A/B-tested on real hardware to answer hypothesis H4 / risk R2. */
 enum class InputSource(val label: String, val source: Int) {
@@ -153,6 +170,15 @@ class AudioPipeline(
     @Volatile var routedOutType = -1; private set
     @Volatile var noiseSuppressionEnabled = false; private set
     @Volatile var noiseReduction = 0f; private set
+
+    // Scenario G instrumentation. Cumulative averages hide the spikes that make audio audibly bad,
+    // so the maxima are tracked too - one glitch in four hours is invisible in a mean.
+    @Volatile var maxReadNanos = 0L; private set
+    @Volatile var maxWriteNanos = 0L; private set
+    @Volatile var droppedFrames = 0L; private set
+    @Volatile var paddedFrames = 0L; private set
+    @Volatile var peakBacklogFrames = 0L; private set
+    @Volatile var elapsedNanos = 0L; private set
 
     // High-pass filter coefficient, or -1 to bypass entirely. Written by the UI thread, read by the
     // audio thread. The two `hpPrev*` values are audio-thread-only state, so they need no volatile.
@@ -309,12 +335,27 @@ class AudioPipeline(
 
     private fun runLoop(rec: AudioRecord, trk: AudioTrack) {
         Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO)
-        val buffer = ShortArray(FRAMES_PER_BUFFER) // allocated once, before the loop
+
+        // Everything the loop needs is allocated here, before it starts. A GC pause is an audible
+        // glitch, so the loop below must not allocate - which is also why the timestamp object and
+        // the silence buffer are reused rather than created per correction.
+        val buffer = ShortArray(FRAMES_PER_BUFFER)
+        val silence = ShortArray(FRAMES_PER_BUFFER)
+        val captureTime = AudioTimestamp()
+
         var inFrames = 0L
         var outFrames = 0L
         var readTotal = 0L
         var writeTotal = 0L
         var iterations = 0L
+        var readMax = 0L
+        var writeMax = 0L
+        var drops = 0L
+        var pads = 0L
+        var peakBacklog = 0L
+        var lastUnderruns = 0
+        var sinceCorrection = Long.MAX_VALUE / 2 // allow the first correction immediately
+        val startedAt = System.nanoTime()
 
         while (running) {
             val t0 = System.nanoTime()
@@ -325,18 +366,56 @@ class AudioPipeline(
                 break
             }
             applyNoiseReduction(buffer, read)
-            val written = trk.write(buffer, 0, read)
-            val t2 = System.nanoTime()
-            if (written < 0) {
-                if (running) loopError = "AudioTrack.write returned $written"
-                break
+
+            // ── Drift correction ────────────────────────────────────────────────────────────────
+            // The phone's ADC and the earbud's DAC run off independent crystals. At 100 ppm that is
+            // ~360 ms of accumulated offset per hour, and it has to go somewhere: either the output
+            // starves (clicks) or the input backs up (growing delay, then a lost buffer). Checked
+            // once a second, corrected at most once a minute, 20 ms at a time - the drift needs
+            // roughly one correction every three minutes, so this has ample headroom while staying
+            // far below the rate at which a listener would notice.
+            var skipWrite = false
+            if (iterations % DRIFT_CHECK_FRAMES == 0L) {
+                val underruns = trk.underrunCount
+                val backlog = captureBacklog(rec, captureTime, inFrames)
+                if (backlog > peakBacklog) peakBacklog = backlog
+
+                if (sinceCorrection >= CORRECTION_MIN_FRAMES) {
+                    if (underruns > lastUnderruns) {
+                        // Playback is ahead: the track ran dry. Give it one frame of cushion.
+                        // Silence is the honest padding - inventing audio would be worse.
+                        trk.write(silence, 0, silence.size)
+                        outFrames += silence.size
+                        pads++
+                        sinceCorrection = 0
+                    } else if (backlog > BACKLOG_DROP_FRAMES) {
+                        // Capture is ahead: we are reading audio that is already stale, and the
+                        // delay is growing. Throw this frame away to claw back 20 ms.
+                        skipWrite = true
+                        drops++
+                        sinceCorrection = 0
+                    }
+                }
+                lastUnderruns = underruns
             }
 
+            if (!skipWrite) {
+                val written = trk.write(buffer, 0, read)
+                if (written < 0) {
+                    if (running) loopError = "AudioTrack.write returned $written"
+                    break
+                }
+                outFrames += written
+            }
+            val t2 = System.nanoTime()
+
             inFrames += read
-            outFrames += written
             readTotal += t1 - t0
             writeTotal += t2 - t1
+            if (t1 - t0 > readMax) readMax = t1 - t0
+            if (t2 - t1 > writeMax) writeMax = t2 - t1
             iterations++
+            sinceCorrection += read
 
             // Publishing primitives only - no formatting, no allocation, no logging per frame.
             framesIn = inFrames
@@ -344,8 +423,32 @@ class AudioPipeline(
             readNanos = readTotal
             writeNanos = writeTotal
             blocks = iterations
+            maxReadNanos = readMax
+            maxWriteNanos = writeMax
+            droppedFrames = drops
+            paddedFrames = pads
+            peakBacklogFrames = peakBacklog
+            elapsedNanos = System.nanoTime() - startedAt
         }
         Log.i(LOG_TAG, "monitor loop exited (error=$loopError)")
+    }
+
+    /**
+     * How many captured frames are waiting to be read, or -1 if the platform will not say.
+     *
+     * `getTimestamp()` reports the frame position the hardware has reached; subtracting what we have
+     * consumed gives the queue depth directly, in frames, with no unit conversion to get wrong.
+     *
+     * The sanity bound matters: this is OEM-implemented, it is not guaranteed to be meaningful, and
+     * a nonsense value here would make the correction above throw away good audio. Anything outside
+     * one second of backlog is treated as "no answer" rather than believed.
+     */
+    private fun captureBacklog(rec: AudioRecord, into: AudioTimestamp, consumed: Long): Long {
+        val ok = rec.getTimestamp(into, AudioTimestamp.TIMEBASE_MONOTONIC) ==
+            AudioRecord.SUCCESS
+        if (!ok) return -1
+        val backlog = into.framePosition - consumed
+        return if (backlog in 0..SAMPLE_RATE.toLong()) backlog else -1
     }
 
     fun stop() {
@@ -464,13 +567,25 @@ class AudioPipeline(
         )
     }
 
+    /**
+     * The Scenario G evidence line, and what the UI's diagnostics show.
+     *
+     * Both the mean *and* the maximum block times are here on purpose: a single 300 ms stall in four
+     * hours is an audible glitch and is completely invisible in an average over 700,000 frames.
+     */
     fun statsLine(): String {
         val n = blocks
         val avgRead = if (n > 0) readNanos / n / 1000 else 0
         val avgWrite = if (n > 0) writeNanos / n / 1000 else 0
         val drift = framesIn - framesOut
-        return "frames in=$framesIn out=$framesOut drift=$drift underruns=$underrunCount " +
-            "avgRead=${avgRead}us avgWrite=${avgWrite}us silenced=$clientSilenced"
+        val minutes = elapsedNanos / 60_000_000_000.0
+        val backlogMs = peakBacklogFrames * 1000 / SAMPLE_RATE
+        return "t=%.1fmin frames in=%d out=%d drift=%d underruns=%d ".format(
+            minutes, framesIn, framesOut, drift, underrunCount,
+        ) +
+            "read=${avgRead}/${maxReadNanos / 1000}us write=${avgWrite}/${maxWriteNanos / 1000}us " +
+            "corrections=drop:$droppedFrames,pad:$paddedFrames peakBacklog=${backlogMs}ms " +
+            "silenced=$clientSilenced"
     }
 
     /** Filter memory must not carry across sessions, or the first frames click. */

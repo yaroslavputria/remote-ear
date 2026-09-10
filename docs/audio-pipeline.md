@@ -178,6 +178,22 @@ for this product.
 3. Correct coarsely when a threshold is crossed: **drop one frame** if the pipeline is running long
    (capture ahead), **write one frame of silence** if underruns are climbing (playback ahead). A
    single 20 ms correction every few minutes is inaudible; the drift it corrects is not.
+
+   *Implemented in Phase 6.* Checked once a second, never per frame; at most **one 20 ms correction
+   per minute** of audio, which is ~3× the headroom drift at 100 ppm actually needs. The two signals:
+
+   - **Playback ahead** — `AudioTrack.getUnderrunCount()` increased since the last check. The track
+     ran dry, so it gets one frame of *silence* as cushion. Silence is the honest padding; inventing
+     audio would be worse.
+   - **Capture ahead** — `AudioRecord.getTimestamp()` gives the frame position the hardware has
+     reached, and subtracting the frames we have consumed is the queue depth **directly, in frames,
+     with no unit conversion to get wrong**. Past 100 ms of backlog, one frame is dropped.
+
+   The backlog reading is sanity-bounded to 0..1 s and ignored outside that, because it is
+   OEM-implemented and a nonsense value would make the correction throw away good audio. Both
+   corrections are counted and reported, so a run can show whether they fired at all and whether
+   the backlog kept growing anyway — which is the signal that the coarse approach has run out and a
+   resampler is needed. That would want its own ADR.
 4. **No resampler in MVP.** Adaptive resampling is the correct long-term answer and a poor first
    answer. Revisit only if H7 measurements show the coarse correction is audible.
 

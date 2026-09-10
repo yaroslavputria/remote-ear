@@ -87,6 +87,9 @@ class MonitoringService : Service() {
     /** Ticks since the last resume attempt, to avoid retrying a failing start every second. */
     private var sinceResumeAttempt = 0
 
+    /** Ticks since the last periodic summary. See [tick]. */
+    private var summaryTicks = 0
+
     /**
      * Headphones appearing and disappearing.
      *
@@ -133,11 +136,11 @@ class MonitoringService : Service() {
     }
 
     /**
-     * Publishes counters, notices a loop that died on its own, and drives recovery.
+     * Publishes counters, notices a loop that died on its own, drives recovery, and emits the
+     * periodic summary that makes a multi-hour run analysable.
      *
-     * Counters are deliberately *not* logged here. Phase 2 found ColorOS chatty enough to rotate
-     * ours out of the logcat ring buffer within a minute, so the app is the source of truth for its
-     * own numbers - which matters for the multi-hour Scenario G run.
+     * Once a second. Everything here is cheap - reading volatile primitives and formatting one
+     * string - and none of it touches the audio thread.
      */
     private fun startWatching() = scope.launch {
         while (true) {
@@ -147,7 +150,23 @@ class MonitoringService : Service() {
     }
 
     private fun tick() {
-        if (pipeline.isRunning) _stats.value = pipeline.statsLine()
+        if (pipeline.isRunning) {
+            val line = pipeline.statsLine()
+            _stats.value = line
+
+            // S2: a periodic summary, never per frame.
+            //
+            // Phase 2 concluded "do not read counters from logcat" because ColorOS rotates them out
+            // within a minute - and that is still true of *polling* logcat afterwards. It is not
+            // true of a `logcat -s RemoteEar:V` stream left running for the duration, which is how
+            // Scenario G is measured, and without these lines there is no time series at all: a
+            // final snapshot cannot show whether the backlog grew steadily or jumped once.
+            summaryTicks++
+            if (summaryTicks >= SUMMARY_EVERY_TICKS) {
+                summaryTicks = 0
+                Log.i(LOG_TAG, "SUMMARY $line")
+            }
+        }
 
         pipeline.loopError?.let { error ->
             Log.e(LOG_TAG, "loop died: $error")
@@ -437,6 +456,9 @@ class MonitoringService : Service() {
 
         /** Two seconds between resume attempts. See [attemptResumeLocked]. */
         private const val RESUME_BACKOFF_TICKS = 2
+
+        /** One counters summary per minute - enough resolution for a multi-hour run, and quiet. */
+        private const val SUMMARY_EVERY_TICKS = 60
 
         private val _state = MutableStateFlow<MonitorState>(MonitorState.Idle)
         private val _stats = MutableStateFlow<String?>(null)

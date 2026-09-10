@@ -202,14 +202,31 @@ sink as usable about a second before it will accept a stream.
 which is not mine to do. The call-reason wording and the `isMusicActive()` recovery are also
 unverified. Those three need a person, and the steps are in the run record.
 
-## Phase 6 — Long run, drift, and battery
+## Phase 6 — Long run, drift, and battery — **instrumented 2026-09-10; the run is what remains**
 
 - Implement the counters from [audio-pipeline.md](audio-pipeline.md): underruns, read/write block
-  time, frames in versus out. Periodic summary logs, never per frame.
+  time, frames in versus out. Periodic summary logs, never per frame. ✅
+  Also **maxima, not just means** — a single 300 ms stall in four hours is an audible glitch and is
+  invisible in an average over 700,000 frames — plus elapsed time, peak backlog and a count of each
+  kind of correction.
 - Implement the coarse drift correction (drop or pad one frame at a threshold) and confirm it is
-  inaudible.
+  inaudible. **Implemented**; whether it is inaudible, or ever even fires, is what the run answers.
 - Full Scenario G run with `batterystats`, on more than one device.
 - Record the real numbers in `docs/test-runs/`.
+
+**The run splits in two, because the phone cannot be both measured and charged.** It was plugged in
+and at 100 %, and unplugging it also takes `adb` away — and with it the per-minute time series,
+since ColorOS rotates our lines out of the ring buffer within a minute.
+
+| | Run 1 — plugged in, `adb` attached | Run 2 — unplugged, unattended |
+|---|---|---|
+| Answers | drift, underruns, stalls, thermals, no-silent-stop | battery drain, OEM process kill ([R1](risks.md)) |
+| Evidence | per-minute `SUMMARY` lines streamed to a file | battery % delta, `batterystats`, and the app's own end-of-run counters |
+| Hypotheses | [H7](feasibility.md) | [H5, H6](feasibility.md) |
+
+Run 2 needs no `adb` on purpose: the counters are cumulative and peak-tracking precisely so that a
+**snapshot at the end is still meaningful**. What it loses is *when* — steady growth versus one
+jump — which is what Run 1 is for.
 
 **Gate (second go/no-go):** several hours of continuous monitoring with no audible degradation, no
 crash, no silent stop, and a battery figure that makes the product usable overnight. Answers
