@@ -148,6 +148,34 @@ So **the 100 % to 81 % drop is ordinary phone use and not attributable to Remote
 running for any of it. Nothing about battery, and nothing about OEM survival, can be claimed from
 it. `dumpsys audio` is what makes that statement safe rather than a guess.
 
+## Declared passed by the tester — 2026-09-10, reported not measured
+
+The tester ran the outstanding checks and reported them all passing: *"i tested all — we are good"*.
+
+**No numbers were captured, and the device was disconnected before any could be read.** So this
+section records an attestation, not a measurement, and the distinction is kept because the whole
+point of these files is that a reader in three months can tell the two apart. Specifically not
+recorded, because they were never seen here:
+
+- the battery percentage before and after, so no drain-per-hour figure exists;
+- the run duration, and whether the session was continuous or interrupted;
+- the end-of-run counter lines — underruns, corrections, peak backlog, worst stall;
+- whether the process survived, or was killed and restarted.
+
+**What is instrument-verified stands on its own** and is above in this file: 16 m 34 s continuous
+with 47,685,120 frames in and exactly as many out, zero underruns, zero drift corrections, backlog
+flat at 80 ms, plus a real phone call handled and recovered from correctly.
+
+**What remains genuinely open** is therefore unchanged in kind, only in confidence: the tester's ear
+found no problem, and the [121 ms stall against an 80 ms record buffer](#the-stalls--the-open-risk)
+is still a mechanism that would produce occasional clicks rather than a counter reading. If clicks
+are ever reported in use, that is where to look first, and raising the record buffer is the fix.
+
+**[R1](../risks.md) — the OEM kill — has no evidence either way.** The durable
+`SessionMarker` that would have made a kill visible landed *after* the runs described here, and its
+thirty-second `force-stop` verification has not been performed. Nothing in this session shows
+whether ColorOS lets this app run overnight.
+
 ## Not answered yet
 
 - **Everything the scenario actually exists for**: hours, not minutes. No claim about hour four can

@@ -85,7 +85,15 @@ the routing assertion intact ([run](test-runs/2026-09-10-oneplus-cph2399-phase5.
 another app taking the microphone — is **built but unexercised**, along with the call wording and
 the focus-recovery polling; all three need a person rather than `adb`.
 
-**Next: Phase 6** — the multi-hour run, drift, battery and OEM process killing.
+**Phase 6** is instrumented and its gate is **passed on the tester's judgement** — the outstanding
+checks were run and reported good, without numbers being captured
+([run](test-runs/2026-09-10-oneplus-cph2399-scenario-g.md)). Instrument-verified: 16 m 34 s
+continuous, 47.7 M frames in and exactly as many out, no underruns, no drift corrections, and a real
+call handled correctly. Battery drain, run duration and OEM survival were not measured, so
+[H5 and H6](feasibility.md) stay open and [R1](risks.md) has no evidence either way.
+
+**Next: Phase 7** — release readiness: a signed minified build, the merged-manifest permission
+check, and the Play paperwork ([R3](risks.md)).
 
 Still open on hardware: a numeric latency figure (no clap test yet), LE Audio (H2 — no hardware), an
 OEM baseline (no near-AOSP device), and all Android 15/16 behaviour (untestable on API 34). The

@@ -238,6 +238,19 @@ continuous" is worse than no snapshot.
 crash, no silent stop, and a battery figure that makes the product usable overnight. Answers
 [H5, H6, H7](feasibility.md).
 
+**Gate status: passed on the tester's judgement, 2026-09-10** — *"i tested all — we are good"*
+([run](test-runs/2026-09-10-oneplus-cph2399-scenario-g.md)). Recorded as an attestation rather than
+a measurement, because no numbers were captured and the device was disconnected before any could be
+read. That is a legitimate way to pass a gate on a personal project; it is not the same thing as
+evidence, and the run record keeps the two apart.
+
+Instrument-verified: 16 m 34 s continuous, 47,685,120 frames in and exactly as many out, zero
+underruns, zero drift corrections, peak backlog flat at 80 ms, and a real phone call handled and
+recovered from. **Not measured: battery drain, run duration, and OEM survival** — so H5 and H6 stay
+open, and [R1](risks.md) has no evidence either way. The durable session marker that would make an
+overnight kill visible landed after these runs and its thirty-second `force-stop` check is still
+outstanding.
+
 *This is where an unglamorous truth may surface: if a given OEM kills the service after 40 minutes,
 the product does not work on that OEM, and saying so is better than shipping a monitor that stops.*
 
