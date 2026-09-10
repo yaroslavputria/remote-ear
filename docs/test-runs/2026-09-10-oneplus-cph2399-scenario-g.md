@@ -6,7 +6,7 @@
 | Headphones | **JBL WAVE FLEX** — the first run where the model is recorded, because the app now shows it |
 | Build | `cbf1a48`, debug |
 | Scenario | **G — several hours of monitoring** ([test-matrix.md](../test-matrix.md)) |
-| Status | **Run 1 started 15:33. Not a result yet.** |
+| Status | **No unplugged run has happened. Run 1 collected 16 m 34 s plugged in.** |
 
 ## Why this is two runs
 
@@ -130,6 +130,23 @@ SESSION 42.3min interruptions=Call:1 underruns=0 corrections=drop:0,pad:0
 the run was not continuous. It is also logged once as `FINAL …` when the user presses Stop.
 
 **Run 1 needs restarting** on the fixed build; the phone locked itself before that could happen.
+
+## The unplugged run has not happened
+
+The phone came back on USB at 21:25, five and a half hours after the last session, at 81 %. The
+recording history settles what took place in between:
+
+```text
+15:33:24  rec update  session 66089   <- the 16 m 34 s run
+15:49:59  rec stop                     <- the phone call
+15:52:04  rec update  session 66145   <- resumed by itself
+15:56:13  rec stop                     <- an APK reinstall killed it
+            (no recording session after this, at all)
+```
+
+So **the 100 % to 81 % drop is ordinary phone use and not attributable to RemoteEar**, which was not
+running for any of it. Nothing about battery, and nothing about OEM survival, can be claimed from
+it. `dumpsys audio` is what makes that statement safe rather than a guess.
 
 ## Not answered yet
 

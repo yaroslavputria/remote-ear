@@ -40,6 +40,38 @@ their child and they are not. A crash is better than this — a crash is visible
 **Explicitly rejected:** requesting `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` by default. Play-policy
 risk, and it does not reliably defeat OEM managers anyway.
 
+> **The S5 mitigation was broken until 2026-09-10, and broken specifically for this risk.**
+>
+> The "ended on its own" flag was a static field set from `Service.onDestroy()`. A process killed
+> outright — which is what an OEM battery manager does — **never calls `onDestroy()`**, and even
+> when it did, the flag lived in memory that died moments later. So the only shape of R1 it could
+> ever catch was "the service was destroyed but the process survived": the least likely one.
+>
+> A user whose monitor was killed at 3 a.m. would have opened the app to a clean Idle screen with
+> nothing to suggest anything had happened. The one promise this product makes is that it tells you
+> when it has stopped, and the mitigation for its top-ranked risk did not keep that promise.
+>
+> Now durable: a marker is written when a session starts and cleared only when the session ends
+> *visibly* — a deliberate stop, or an error the user can see on both surfaces. A marker still set
+> when the UI next opens means nobody was told. See `SessionMarker`.
+>
+> **Verifying it takes thirty seconds** and does not need an overnight run:
+> `adb shell am force-stop com.yputria.remoteear` while listening is the same shape as an OEM kill —
+> SIGKILL, no `onDestroy` — and reopening the app should show the notice.
+
+**A second, independent record.** `adb shell dumpsys audio` keeps a per-package recording history
+with millisecond timestamps and a silenced flag:
+
+```text
+15:33:24  rec update riid:64055 uid:10558 src:MIC not silenced pack:com.yputria.remoteear
+15:49:59  rec stop   riid:64055 ...
+```
+
+It **survives both process death and logcat rotation**, so it can prove how long the app actually
+held the microphone even when the app itself was killed and its counters died with it. For an
+unattended run that is the difference between "it stopped at some point" and "it stopped at 03:41".
+Nothing in the app is needed for it, which is exactly why it is trustworthy here.
+
 ## R2 — Microphone processing gates away quiet room sound {#r2}
 
 **Medium probability, high impact — the risk that can make the product pointless.** `AudioSource.MIC`

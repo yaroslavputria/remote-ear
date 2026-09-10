@@ -89,7 +89,7 @@ Wanted in the first release if the must-haves land cleanly. None of these block 
 | S2 | Underrun, drift and lag counters, with periodic log summaries | The diagnostic surface for Scenario G. Needed to *understand* the product, not to run it |
 | S3 | `MIC` versus `UNPROCESSED` input toggle | Resolves [H4](feasibility.md) on real hardware. May become a must if `MIC` processing gates quiet room sound |
 | S4 | Software microphone gain with a limiter | Genuinely useful for hearing a quiet room, but `setVolume()` covers the basic case and gain risks clipping |
-| S5 | Detect a session that ended without the user stopping it, and say so afterwards | The honest mitigation for OEM process kills ([R1](risks.md)) |
+| S5 | Detect a session that ended without the user stopping it, and say so afterwards — *rewritten 2026-09-10 to survive process death; the first version did not* | The honest mitigation for OEM process kills ([R1](risks.md)) |
 | ~~S6~~ | ~~Surface "microphone taken by another app" as a distinct state~~ | **Promoted to M15** — the failure turned out to be silent, so a generic error was not merely coarse, it was absent |
 | S7 | **Noise cancellation as a single level control** — *added 2026-09-10, shipped early in Phase 3* | See below |
 | S8 | **The listening screen dims itself after 20 s untouched** — *added 2026-09-10 from the design, shipped in Phase 4* | See below |

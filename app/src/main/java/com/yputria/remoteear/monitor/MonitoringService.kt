@@ -79,6 +79,7 @@ class MonitoringService : Service() {
     private lateinit var audioManager: AudioManager
     private lateinit var pipeline: AudioPipeline
     private lateinit var focus: AudioFocusOwner
+    private lateinit var sessionMarker: SessionMarker
 
     /** Remembered so an automatic resume uses the source the user actually chose. */
     private var source = InputSource.Mic
@@ -133,6 +134,7 @@ class MonitoringService : Service() {
         super.onCreate()
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
         pipeline = AudioPipeline(audioManager, executor)
+        sessionMarker = SessionMarker(this)
         focus = AudioFocusOwner(
             audioManager = audioManager,
             onLoss = { onFocusLost() },
@@ -312,6 +314,9 @@ class MonitoringService : Service() {
         if (sessionStartedAt == 0L) {
             sessionStartedAt = SystemClock.elapsedRealtime()
             pauses.clear()
+            // Written before the streams open: if the process is killed a second later, the fact
+            // that a session was in progress has to have survived it.
+            sessionMarker.sessionStarted()
         }
         setState(MonitorState.Starting)
         try {
@@ -484,6 +489,11 @@ class MonitoringService : Service() {
     /** Single place that both publishes state and keeps the notification honest. */
     private fun setState(next: MonitorState) {
         _state.value = next
+
+        // Idle and Error are the two endings the user is told about - a deliberate stop, or a
+        // failure that says so on both surfaces. Everything else leaves the marker set, which is
+        // the whole point of it. Note that onDestroy deliberately does *not* come through here.
+        if (next is MonitorState.Idle || next is MonitorState.Error) sessionMarker.sessionEnded()
         if (next !is MonitorState.Idle) {
             runCatching {
                 NotificationManagerCompat.from(this)
@@ -501,12 +511,10 @@ class MonitoringService : Service() {
         scope.cancel()
         executor.shutdown()
         if (dyingWhileActive) {
-            // The process is going away with monitoring apparently active - most likely an OEM
-            // battery manager (docs/risks.md R1, ranked first). A session that ends without the
-            // user stopping it is the failure this product most needs to be honest about, so
-            // record it rather than letting it disappear silently.
+            // Most likely an OEM battery manager (docs/risks.md R1, ranked first). Only logged
+            // here: the durable record is [SessionMarker], because a process killed outright never
+            // reaches this method at all.
             Log.w(LOG_TAG, "service destroyed while state=${_state.value} - unexpected stop")
-            _endedUnexpectedly.value = true
         }
         _state.value = MonitorState.Idle
         _stats.value = null
@@ -530,27 +538,19 @@ class MonitoringService : Service() {
 
         private val _state = MutableStateFlow<MonitorState>(MonitorState.Idle)
         private val _stats = MutableStateFlow<String?>(null)
-        private val _endedUnexpectedly = MutableStateFlow(false)
 
         /**
          * Observed by the UI. Held in the companion so the UI needs no binding: the service is the
          * source of truth and the UI only ever watches, behind a ViewModel since Phase 4.
+         *
+         * Note what this *cannot* carry: anything that must outlive the process. A session ending
+         * without the user stopping it is precisely such a fact, and it lives in [SessionMarker]
+         * instead - it used to live here, and that was a defect.
          */
         val state: StateFlow<MonitorState> = _state.asStateFlow()
 
         /** Live pipeline counters. Null when not monitoring. */
         val stats: StateFlow<String?> = _stats.asStateFlow()
-
-        /**
-         * True once a session has ended without the user stopping it - the R1 signature. The UI
-         * surfaces this so an OEM kill becomes visible instead of the user simply never hearing
-         * anything again.
-         */
-        val endedUnexpectedly: StateFlow<Boolean> = _endedUnexpectedly.asStateFlow()
-
-        fun acknowledgeUnexpectedEnd() {
-            _endedUnexpectedly.value = false
-        }
 
         private val _noiseCancellation = MutableStateFlow(0f)
 

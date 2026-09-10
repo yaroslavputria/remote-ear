@@ -116,8 +116,18 @@ app is playing sound". This app shipped that bug and a real call found it. **Tre
 as a live description that is re-checked**, not a one-shot decision: pause immediately, let the label
 catch up.
 
-When diagnosing anything in this area, use `adb shell dumpsys audio`: it keeps focus and mode
-histories with millisecond timestamps and **outlives logcat**, which ColorOS rotates within a minute.
+When diagnosing anything in this area, use `adb shell dumpsys audio`. It **outlives both logcat and
+the app's own process**, which ColorOS gives you no choice about, and it keeps three histories with
+millisecond timestamps:
+
+| Grep for | Gives you |
+|---|---|
+| `pack:com.yputria.remoteear` | every capture session: `rec update` / `rec stop`, the source, and a `silenced` flag — so you can prove how long the mic was actually held **even if the app was killed** |
+| `requestAudioFocus` / `abandonAudioFocus` | who took the audio and when. A call is `AudioFocus_For_Phone_Ring_And_Calls` / `USAGE_VOICE_COMMUNICATION`; ordinary playback is `USAGE_MEDIA/CONTENT_TYPE_MUSIC` |
+| `setMode(` | mode transitions, with the package that caused them |
+
+For an unattended run this is the difference between "it stopped at some point" and "it stopped at
+03:41". Reach for it before believing anything reconstructed from memory or inference.
 
 **Reading the audio mode is allowed; setting it is not.** `getMode()` needs no permission and is the
 only way to tell a phone call from another app's music — both arrive as an identical audio-focus

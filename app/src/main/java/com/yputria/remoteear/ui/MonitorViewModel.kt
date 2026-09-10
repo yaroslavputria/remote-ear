@@ -17,6 +17,7 @@ import com.yputria.remoteear.monitor.InputSource
 import com.yputria.remoteear.monitor.MonitorState
 import com.yputria.remoteear.monitor.MonitoringService
 import com.yputria.remoteear.monitor.PauseReason
+import com.yputria.remoteear.monitor.SessionMarker
 import com.yputria.remoteear.monitor.deviceTypeName
 import com.yputria.remoteear.monitor.headphoneName
 import com.yputria.remoteear.monitor.streamMusicFraction
@@ -44,8 +45,16 @@ class MonitorViewModel(app: Application) : AndroidViewModel(app) {
 
     private val audioManager = app.getSystemService(AudioManager::class.java)
 
+    private val marker = SessionMarker(app)
+
     private val micGranted = MutableStateFlow(hasMicPermission())
     private val micPermanentlyDenied = MutableStateFlow(false)
+
+    /**
+     * Whether the last session ended without anyone stopping it - read from durable storage, not
+     * from the service, because the process that would have reported it may be the thing that died.
+     */
+    private val endedUnexpectedly = MutableStateFlow(false)
     private val sinks = MutableStateFlow(currentSinks())
     private val volume = MutableStateFlow(audioManager.streamMusicFraction())
     private val inputSource = MutableStateFlow(InputSource.Mic)
@@ -74,6 +83,7 @@ class MonitorViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     init {
+        reconcileLastSession()
         audioManager.registerAudioDeviceCallback(deviceCallback, null)
         app.contentResolver.registerContentObserver(Settings.System.CONTENT_URI, true, volumeObserver)
     }
@@ -92,8 +102,19 @@ class MonitorViewModel(app: Application) : AndroidViewModel(app) {
     private fun currentSinks(): List<Sink> =
         audioManager.usableBluetoothSinks().map { Sink(it.headphoneName(), deviceTypeName(it.type)) }
 
+    /**
+     * A session is only "still running" if the service says so *now*. Asked on every resume,
+     * because the interesting case is the user opening the app hours later to find out what
+     * happened.
+     */
+    private fun reconcileLastSession() {
+        endedUnexpectedly.value =
+            marker.reconcile(serviceRunning = MonitoringService.state.value !is MonitorState.Idle)
+    }
+
     /** Permission and volume can change while the Activity is stopped, so re-read them on resume. */
     fun refresh() {
+        reconcileLastSession()
         micGranted.value = hasMicPermission()
         if (micGranted.value) micPermanentlyDenied.value = false
         sinks.value = currentSinks()
@@ -116,7 +137,10 @@ class MonitorViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setNoiseReduction(level: Float) = MonitoringService.setNoiseCancellation(level)
 
-    fun dismissUnexpectedEnd() = MonitoringService.acknowledgeUnexpectedEnd()
+    fun dismissUnexpectedEnd() {
+        marker.acknowledge()
+        endedUnexpectedly.value = false
+    }
 
     fun listen() = MonitoringService.start(getApplication(), inputSource.value)
 
@@ -144,7 +168,7 @@ class MonitorViewModel(app: Application) : AndroidViewModel(app) {
         combine(
             MonitoringService.state,
             MonitoringService.stats,
-            MonitoringService.endedUnexpectedly,
+            endedUnexpectedly,
             MonitoringService.noiseCancellation,
             ::Service,
         ),
