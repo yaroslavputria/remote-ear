@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.RemoteEar" parent="android:Theme.Material.Light.NoActionBar" />
+    <!--
+      The launch theme, which is what the eye sees before Compose draws anything. Dark, and painted
+      the palette's own surface colour: the template's light theme flashed white, which in a dark
+      room at 3 a.m. is a small act of hostility.
+    -->
+    <style name="Theme.RemoteEar" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/surface</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+    </style>
 </resources>

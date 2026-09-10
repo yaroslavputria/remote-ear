@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Only for the window background before Compose takes over. The palette lives in
+         theme/Color.kt; this is the one value the platform needs as a resource. -->
+    <color name="surface">#0E1112</color>
+</resources>
