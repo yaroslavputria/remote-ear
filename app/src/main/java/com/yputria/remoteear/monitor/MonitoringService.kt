@@ -137,13 +137,20 @@ class MonitoringService : Service() {
             )
             is StartOutcome.Failed -> {
                 Log.e(LOG_TAG, "pipeline start failed: ${outcome.reason}")
-                // No usable Bluetooth sink is a pause, not an error: it resolves by itself when the
-                // headphones come back, and the service must be alive for that to work.
-                if (outcome.reason.contains("Bluetooth", ignoreCase = true)) {
-                    setState(MonitorState.Paused(PauseReason.BluetoothGone))
-                } else {
-                    setState(MonitorState.Error(outcome.reason))
-                }
+                setState(
+                    when (outcome.cause) {
+                        // No usable sink is a pause, not an error: it resolves by itself when the
+                        // headphones come back, and the service must be alive for that to work.
+                        FailureCause.NoBluetoothSink ->
+                            MonitorState.Paused(PauseReason.BluetoothGone)
+                        // A wrong route is never a pause. It is invariant 2 firing, and it gets its
+                        // own message because the user's headset microphone would have been live.
+                        FailureCause.WrongRoute ->
+                            MonitorState.Error(outcome.reason, ErrorKind.WrongRoute)
+                        FailureCause.AudioOpen ->
+                            MonitorState.Error(outcome.reason, ErrorKind.AudioOpenFailed)
+                    },
+                )
             }
         }
     }

@@ -109,6 +109,16 @@ val outType = track.routedDevice?.type
   user. Do not continue in a "degraded mode": it means audio is arriving from the wrong microphone,
   which sounds fine and is wrong.
 
+**Classify failures with a type, never by matching the message text.** This has already gone wrong
+here: the service decided whether a failed start was a resumable pause by testing the error string
+for `"Bluetooth"` — and every routing-failure message contains `BLUETOOTH_SCO`. The one failure this
+whole ADR exists to catch would have been shown to the user as *"headphones disconnected, reconnect
+to continue"*, quietly, as a pause. Hence `FailureCause` (`NoBluetoothSink` / `WrongRoute` /
+`AudioOpen`), decided where the failure happens. If you add a failure path, give it a cause.
+
+A missing sink and a wrong route both mention Bluetooth and mean opposite things: one resolves by
+itself, the other must never resolve by itself.
+
 Details and `adb` verification: [references/routing-verification.md](references/routing-verification.md).
 
 ## Device selection

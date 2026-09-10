@@ -45,7 +45,33 @@ enum class InputSource(val label: String, val source: Int) {
 
 sealed interface StartOutcome {
     data object Started : StartOutcome
-    data class Failed(val reason: String) : StartOutcome
+
+    /**
+     * The start did not happen. [cause] is what the caller must branch on; [reason] is for the log
+     * and the diagnostic row, and its wording is not load-bearing.
+     */
+    data class Failed(val reason: String, val cause: FailureCause) : StartOutcome
+}
+
+/**
+ * Why a start failed, in the three flavours that lead to *different outcomes for the user*.
+ *
+ * This is an enum rather than a substring match on [StartOutcome.Failed.reason] because the
+ * substring approach was wrong in a way that mattered: every routing failure message contains the
+ * word "BLUETOOTH" (`"input routed to BLUETOOTH_SCO"`), so a caller looking for "Bluetooth" to
+ * detect a missing sink would classify the SCO failure as a resumable pause. That inverts
+ * invariant 2 - the earbud microphone being live would have been reported as "headphones
+ * disconnected, reconnect to continue".
+ */
+enum class FailureCause {
+    /** No A2DP or LE Audio sink is connected. Resolves by itself when headphones return. */
+    NoBluetoothSink,
+
+    /** `getRoutedDevice()` disagreed with the request. Includes any `TYPE_BLUETOOTH_SCO`. */
+    WrongRoute,
+
+    /** A stream would not open, or the platform rejected the format. */
+    AudioOpen,
 }
 
 /** Human-readable [AudioDeviceInfo] type, so the evidence log is legible months later. */
@@ -127,12 +153,12 @@ class AudioPipeline(
     }
 
     fun start(inputSource: InputSource): StartOutcome {
-        if (running) return StartOutcome.Failed("already running")
+        if (running) return StartOutcome.Failed("already running", FailureCause.AudioOpen)
 
         val mic = audioManager.builtInMic()
-            ?: return StartOutcome.Failed("no TYPE_BUILTIN_MIC reported by AudioManager")
+            ?: return StartOutcome.Failed("no TYPE_BUILTIN_MIC reported by AudioManager", FailureCause.AudioOpen)
         val sink = audioManager.usableBluetoothSinks().firstOrNull()
-            ?: return StartOutcome.Failed("no Bluetooth A2DP or LE Audio output connected")
+            ?: return StartOutcome.Failed("no Bluetooth A2DP or LE Audio output connected", FailureCause.NoBluetoothSink)
 
         val minRecord = AudioRecord.getMinBufferSize(
             SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT,
@@ -141,7 +167,7 @@ class AudioPipeline(
             SAMPLE_RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT,
         )
         if (minRecord <= 0 || minTrack <= 0) {
-            return StartOutcome.Failed("getMinBufferSize rejected 48 kHz mono (rec=$minRecord track=$minTrack)")
+            return StartOutcome.Failed("getMinBufferSize rejected 48 kHz mono (rec=$minRecord track=$minTrack)", FailureCause.AudioOpen)
         }
         // Capture side: double the minimum. Measured 3840 -> 7680 bytes = 80 ms, cheap insurance
         // against scheduler pressure.
@@ -168,11 +194,11 @@ class AudioPipeline(
                 .setBufferSizeInBytes(recordBytes)
                 .build()
         } catch (e: Exception) {
-            return StartOutcome.Failed("AudioRecord.build failed: ${e.message}")
+            return StartOutcome.Failed("AudioRecord.build failed: ${e.message}", FailureCause.AudioOpen)
         }
         if (rec.state != AudioRecord.STATE_INITIALIZED) {
             rec.release()
-            return StartOutcome.Failed("AudioRecord did not initialise")
+            return StartOutcome.Failed("AudioRecord did not initialise", FailureCause.AudioOpen)
         }
 
         // USAGE_MEDIA, never USAGE_VOICE_COMMUNICATION: the whole product depends on staying on
@@ -197,7 +223,7 @@ class AudioPipeline(
                 .build()
         } catch (e: Exception) {
             rec.release()
-            return StartOutcome.Failed("AudioTrack.build failed: ${e.message}")
+            return StartOutcome.Failed("AudioTrack.build failed: ${e.message}", FailureCause.AudioOpen)
         }
 
         // A preferred device is a request, not a guarantee - hence the assertion below.
@@ -229,7 +255,7 @@ class AudioPipeline(
             rec.unregisterAudioRecordingCallback(recordingCallback)
             rec.stop(); rec.release()
             trk.stop(); trk.release()
-            return StartOutcome.Failed(reason)
+            return StartOutcome.Failed(reason, FailureCause.WrongRoute)
         }
 
         record = rec

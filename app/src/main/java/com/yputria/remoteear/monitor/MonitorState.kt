@@ -33,7 +33,28 @@ sealed interface MonitorState {
     data class Paused(val reason: PauseReason) : MonitorState
 
     /** Something is wrong and the user must act. Carries what was actually observed. */
-    data class Error(val message: String) : MonitorState
+    data class Error(
+        val message: String,
+        val kind: ErrorKind = ErrorKind.AudioOpenFailed,
+    ) : MonitorState
+}
+
+/**
+ * What kind of failure to *tell the user about*. [MonitorState.Error.message] stays technical and
+ * goes in the diagnostic row; this decides the sentence above it.
+ *
+ * The distinction is not cosmetic. "The microphone could not be opened" and "your headphones
+ * connected as a headset" call for different actions from the user, and the second one means the
+ * headset microphone would have been live instead of the phone's - the failure
+ * docs/adr/0004-media-path-only.md exists to prevent. Reporting it as a generic audio error would
+ * hide exactly the thing worth knowing.
+ */
+enum class ErrorKind {
+    /** A stream would not open, or the platform rejected the format. */
+    AudioOpenFailed,
+
+    /** `getRoutedDevice()` disagreed with what we asked for - including any `TYPE_BLUETOOTH_SCO`. */
+    WrongRoute,
 }
 
 /**
