@@ -109,6 +109,16 @@ val outType = track.routedDevice?.type
   user. Do not continue in a "degraded mode": it means audio is arriving from the wrong microphone,
   which sounds fine and is wrong.
 
+**A focus loss arrives ~437 ms before the audio mode becomes a call mode** *(measured on the OnePlus
+CPH2399, 2026-09-10)*. So `getMode()` inside the focus callback still reads `MODE_NORMAL` during a
+genuine incoming call, and classifying the interruption there — once — labels a phone call "another
+app is playing sound". This app shipped that bug and a real call found it. **Treat the pause reason
+as a live description that is re-checked**, not a one-shot decision: pause immediately, let the label
+catch up.
+
+When diagnosing anything in this area, use `adb shell dumpsys audio`: it keeps focus and mode
+histories with millisecond timestamps and **outlives logcat**, which ColorOS rotates within a minute.
+
 **Reading the audio mode is allowed; setting it is not.** `getMode()` needs no permission and is the
 only way to tell a phone call from another app's music — both arrive as an identical audio-focus
 loss, and they need different words on screen. The guard in `tools/check-invariants.sh` is on

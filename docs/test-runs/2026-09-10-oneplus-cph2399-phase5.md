@@ -52,28 +52,63 @@ connected — the worst kind of failure this product has.
    [audio-pipeline.md](../audio-pipeline.md) remains unmeasured. Recorded as an opinion, which is
    what it is.
 
+## Music and a real phone call — run by the user, 15:14
+
+Reconstructed from `dumpsys audio`, which keeps a focus and mode history that outlives logcat on
+this device. **This is why the diagnosis below is a measurement rather than a theory** — our own log
+lines had already rotated out of ColorOS's ring buffer.
+
+```text
+15:14:10.923  YouTube Music requests focus (USAGE_MEDIA/CONTENT_TYPE_MUSIC)
+15:14:11.033  RemoteEar abandons focus                     <- paused, 110 ms later
+15:14:23.384  RemoteEar requests focus                     <- resumed by itself once music stopped
+
+15:14:51.768  telecom requests focus (AudioFocus_For_Phone_Ring_And_Calls,
+                                      USAGE_VOICE_COMMUNICATION, req=GAIN_TRANSIENT)
+15:14:52.205  setMode(MODE_IN_CALL) from com.android.server.telecom   <- +437 ms
+15:14:52.287  RemoteEar abandons focus                     <- paused
+15:14:58.607  setMode(MODE_NORMAL)                          <- call ends
+15:14:59.228  RemoteEar requests focus                     <- resumed 0.6 s later
+```
+
+| Check | Result |
+|---|---|
+| **Music: pause** | **pass** — 110 ms after the other app took focus |
+| **Music: automatic resume** | **pass** — the `isMusicActive()` polling works; this is the mechanism that makes *"stop that app and listening continues by itself"* true after a permanent focus loss, where Android sends no `GAIN` |
+| **Call: pause** | **pass** |
+| **Call: automatic resume when the call ends** | **pass** — 0.6 s |
+| **Call: the wording** | **FAIL, now fixed** — it said *another app*, not *a phone call* |
+
+### Why the call was mislabelled — measured, 437 ms
+
+**Telecom takes audio focus 437 ms before the platform enters call mode.** Our focus callback is
+what classified the pause, and at that instant `getMode()` still read `MODE_NORMAL` — so a genuine
+phone call was labelled *"Another app is playing sound to your headphones"*.
+
+Worth being clear about the severity: **the safety behaviour was correct**. The app paused, said
+plainly that the room was not being heard, and resumed by itself. Only the explanation was wrong.
+In a product whose central claim is that it tells you the truth about what it is doing, that is
+still a defect.
+
+**Fix:** the pause reason is now re-evaluated on every watcher tick rather than decided once, so a
+call is relabelled within a second — far faster than anyone reads the screen — and a call that
+starts while the app is *already* paused for another reason is also caught. `BluetoothGone` is
+deliberately excluded from the upgrade: no headphones is the blocker that needs the user, and it
+outlives the call. The audio mode is now logged alongside the focus loss, so if this decision is
+ever wrong again it is visible in a bug report instead of needing to be inferred.
+
+**Still to re-test:** one more call, to confirm the label reads *"A phone call is in progress."*
+
 ## Not run — and these are gaps, not passes
 
 | Scenario | Why not |
 |---|---|
-| **F — another app takes the microphone** | Every way of doing this from `adb` means starting a recorder, which writes a file of the user's room to their phone. That is their decision to make, not mine. **The code path is unexercised**, and it is the most dangerous one: Android delivers zeros rather than an error |
-| **Phone call** | Cannot place a real call from `adb` responsibly. The reason-naming logic (`getMode()` reading as a call) is therefore **unverified** — if it is wrong, the pause still happens but is labelled *"Another app is playing sound"* instead of *"A phone call is in progress"* |
-| **Another app takes audio focus** (music) | Needs a second app playing audio; trivial for the user, unavailable to `adb` without side effects |
-| Permanent focus loss recovery via `isMusicActive()` polling | Untested. This is the mechanism that makes *"Stop that app and listening continues by itself"* true rather than aspirational |
+| **F — another app takes the microphone** | Reported working by the user, but **not captured**: `dumpsys audio` records focus and mode, not capture clients, so there is no evidence trail for it here. The one thing that would prove it is a log line from our own recording callback, which had rotated out |
+| **The call wording after the fix** | The fix landed after the test. Needs one more call |
 | Dim state, light theme, both `Stopped` kinds | Still only verified as previews |
 | Multi-hour endurance, drift, battery, OEM kill | Phase 6 / Scenario G |
 
-## Hand-over: the three tests that need a person
+## What is left for a person
 
-1. **Music** — start listening, then play anything for ~10 s. Expect *"Paused · Another app is
-   playing sound to your headphones"*, then automatic resume within a couple of seconds of stopping
-   it.
-2. **Call** — start listening, then take or make a call. Expect *"Paused · A phone call is in
-   progress"* — **the wording is the thing being tested**; a call mislabelled as "another app" means
-   `getMode()` did not read as a call on this OEM. Expect resume when the call ends.
-3. **Microphone** — start listening, then open the voice recorder and record for a few seconds.
-   Expect *"Paused · Another app is using the microphone"* and automatic resume when you stop.
-   Delete the recording afterwards if you would rather it not exist.
-
-If any of the three pauses but shows the *wrong reason*, that is still a pass for safety — the user
-is told they are not hearing the room — and a bug worth fixing in the wording layer only.
+One call, on the fixed build, to confirm the label now reads *"A phone call is in progress."* The
+pause and the resume are already known to work; only the wording is in question.

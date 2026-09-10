@@ -166,25 +166,48 @@ class MonitoringService : Service() {
                 if (pipeline.clientSilenced) pauseLocked(PauseReason.MicPreempted)
             }
 
-            is MonitorState.Paused -> when (state.reason) {
-                // The streams are still open in this state, which is what makes the recovery
-                // immediate: the same callback that reported the silencing reports its end.
-                PauseReason.MicPreempted ->
-                    if (!pipeline.clientSilenced) restoreMonitoring()
+            is MonitorState.Paused -> {
+                // The reason is a live description, not a one-shot classification.
+                //
+                // Measured on the device 2026-09-10: telecom takes audio focus at T, and the audio
+                // mode only becomes a call mode at T+437 ms. So the focus callback - which is what
+                // classifies the pause - runs while getMode() still reads MODE_NORMAL, and a real
+                // phone call gets labelled "another app is playing sound". The pause and the
+                // recovery were both correct; only the words were wrong, which in this product is
+                // not a small thing.
+                //
+                // Rechecking each tick fixes it within a second, long before anyone reads the
+                // screen, and it also covers a call that starts *while* already paused for some
+                // other reason. BluetoothGone is left alone: no headphones is the blocker that
+                // needs the user, and it outlives the call.
+                if (state.reason != PauseReason.Call &&
+                    state.reason != PauseReason.BluetoothGone &&
+                    inCall()
+                ) {
+                    pauseLocked(PauseReason.Call)
+                    return
+                }
 
-                // "Listening continues by itself when the call ends" - so something has to be
-                // watching for the end of the call. There is no callback for it that does not cost
-                // a permission, so it is polled.
-                PauseReason.Call -> if (!inCall()) attemptResumeLocked()
+                when (state.reason) {
+                    // The streams are still open in this state, which is what makes the recovery
+                    // immediate: the same callback that reported the silencing reports its end.
+                    PauseReason.MicPreempted ->
+                        if (!pipeline.clientSilenced) restoreMonitoring()
 
-                // isMusicActive() is coarse, and it is what makes "stop that app and listening
-                // continues by itself" true rather than aspirational: after a permanent focus
-                // loss Android does not send us a GAIN, so waiting for one would wait forever.
-                PauseReason.AudioFocusLost ->
-                    if (!inCall() && !audioManager.isMusicActive) attemptResumeLocked()
+                    // "Listening continues by itself when the call ends" - so something has to
+                    // watch for the end of the call. There is no callback for that which does not
+                    // cost a permission, so it is polled.
+                    PauseReason.Call -> if (!inCall()) attemptResumeLocked()
 
-                PauseReason.BluetoothGone ->
-                    if (audioManager.usableBluetoothSinks().isNotEmpty()) attemptResumeLocked()
+                    // isMusicActive() is coarse, and it is what makes "stop that app and listening
+                    // continues by itself" true rather than aspirational: after a permanent focus
+                    // loss Android sends no GAIN, so waiting for one would wait forever.
+                    PauseReason.AudioFocusLost ->
+                        if (!inCall() && !audioManager.isMusicActive) attemptResumeLocked()
+
+                    PauseReason.BluetoothGone ->
+                        if (audioManager.usableBluetoothSinks().isNotEmpty()) attemptResumeLocked()
+                }
             }
 
             else -> Unit
@@ -276,7 +299,13 @@ class MonitoringService : Service() {
      * GAIN, it makes no difference here.
      */
     private fun onFocusLost() {
-        pause(if (inCall()) PauseReason.Call else PauseReason.AudioFocusLost)
+        val mode = audioManager.mode
+        val reason = if (inCall()) PauseReason.Call else PauseReason.AudioFocusLost
+        // The mode is logged because it is the input to a decision that has already been wrong
+        // once: the call mode arrives after this callback, so the watcher corrects the reason a
+        // moment later. Without this line that correction is invisible in a bug report.
+        Log.i(LOG_TAG, "focus lost: audio mode=$mode -> $reason")
+        pause(reason)
     }
 
     /**

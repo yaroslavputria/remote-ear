@@ -229,6 +229,27 @@ service, *after* `startForeground()` succeeds — never from the Activity before
 speculatively. Resuming from `Paused` is safe, because the service is still running and therefore
 still qualifies. One more reason the service outlives the streams.
 
+### A focus loss arrives before the audio mode changes — *(measured 2026-09-10, ~437 ms)*
+
+On an incoming call, `com.android.server.telecom` requests focus **437 ms before**
+`setMode(MODE_IN_CALL)` lands. Measured on the OnePlus CPH2399 from the `dumpsys audio` focus and
+mode histories — see
+[the Phase 5 run](test-runs/2026-09-10-oneplus-cph2399-phase5.md).
+
+Consequences for anything that reacts to a focus loss:
+
+- **`getMode()` inside the focus callback still reads `MODE_NORMAL` during a real call.** Classifying
+  the interruption there and keeping the answer produces a call labelled "another app is playing
+  sound". This app did exactly that, and it took a real call to find it.
+- So **treat the interruption reason as a live description, re-checked**, not as a one-shot
+  classification. Pausing immediately is right; the label has to be allowed to catch up.
+- `dumpsys audio` keeps both histories with millisecond timestamps and **outlives logcat** on chatty
+  OEM builds. It is the best forensic tool available for this class of bug.
+
+Two useful shapes to recognise in that history: a call is
+`AudioFocus_For_Phone_Ring_And_Calls` / `USAGE_VOICE_COMMUNICATION`, while ordinary playback is
+`USAGE_MEDIA/CONTENT_TYPE_MUSIC` from the app's own package.
+
 ## Bluetooth and audio routing
 
 The full explanation is in [feasibility Q1/Q3](feasibility.md) and the rule is
