@@ -40,3 +40,6 @@ desktop.ini
 *.log
 *.hprof
 /scratch/
+
+# Store artefacts are generated: node tools/make-store-assets.js
+# The screenshots are kept, because they are evidence of a real build on a real device.

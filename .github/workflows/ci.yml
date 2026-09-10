@@ -55,12 +55,19 @@ jobs:
       - name: Assemble debug
         run: ./gradlew :app:assembleDebug --stacktrace
 
+      # Built unsigned, deliberately: no key is needed to prove the *shipped* variant carries no
+      # INTERNET permission, and R8 running here means a shrinker misconfiguration fails the build
+      # rather than the store listing.
+      - name: Assemble release (unsigned, R8 on)
+        run: ./gradlew :app:assembleRelease --stacktrace
+
       - name: Unit tests
         run: ./gradlew :app:testDebugUnitTest --stacktrace
 
       # The important one: a dependency can add INTERNET through manifest merging with nobody
-      # writing network code. Only a built manifest can reveal that.
-      - name: Re-check invariants against the merged manifest
+      # writing network code. Only a built manifest can reveal that - and it must be checked on the
+      # release variant too, since that is the one users install.
+      - name: Re-check invariants against the merged manifests (debug and release)
         run: bash tools/check-invariants.sh
 
       - name: Upload debug APK

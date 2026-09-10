@@ -1,0 +1,304 @@
+# Release guide — getting RemoteEar into Google Play
+
+Everything that can be prepared in advance is in this repository. This document is the part only you
+can do, in order, with the exact text to paste where a form asks for it.
+
+> **Two things to know before starting.** A Play developer account costs **$25, once**. And a
+> continuous-microphone app framed as a baby monitor attracts review attention
+> ([risk R3](risks.md)) — which is why the wording below is careful never to promise detection or
+> alerting, and why the absence of `INTERNET` is worth stating plainly.
+
+## What is already done
+
+| | Where |
+|---|---|
+| Minified, shrunk release build (R8) | `app/build.gradle.kts` |
+| Signing wired to a gitignored `keystore.properties` or env vars | same |
+| Store icon, 512 × 512 | [store/icon-512.png](../store/icon-512.png) |
+| Feature graphic, 1024 × 500 | [store/feature-1024x500.png](../store/feature-1024x500.png) |
+| Three phone screenshots | [store/screenshots/](../store/screenshots/) |
+| Privacy policy and terms | `app/src/main/assets/legal/` — shipped in the app **and** the file you will link to |
+| Data Safety answers | below, and [privacy.md](privacy.md) |
+| Listing copy | below |
+| Foreground-service justification | below |
+
+Regenerate the graphics any time with `node tools/make-store-assets.js`; they are drawn from the same
+geometry as the launcher icon so the two cannot drift.
+
+---
+
+## Step 1 — Create the signing key (once, and never lose it)
+
+```bash
+keytool -genkeypair -v \
+  -keystore remote-ear-release.jks \
+  -alias remote-ear \
+  -keyalg RSA -keysize 4096 -validity 10000 \
+  -dname "CN=Yaroslav Putria, O=RemoteEar, C=UA"
+```
+
+Adjust `C=` to your country. It will ask for a keystore password and a key password; use the same
+one for both unless you have a reason not to.
+
+**Keep the `.jks` file and its passwords somewhere you will still have them in five years** — a
+password manager, not just this laptop. Even with Play App Signing (step 5) enabled, losing the
+upload key means a support round-trip to replace it.
+
+Then create `keystore.properties` at the repo root — **gitignored, never committed**:
+
+```properties
+storeFile=C:/path/to/remote-ear-release.jks
+storePassword=…
+keyAlias=remote-ear
+keyPassword=…
+```
+
+Verify the build picks it up:
+
+```bash
+./gradlew :app:bundleRelease
+```
+
+The output is `app/build/outputs/bundle/release/app-release.aab`. **Play wants the `.aab`, not an
+APK.** Without `keystore.properties` this same command still succeeds and produces an *unsigned*
+bundle — deliberate, so CI can build and check the release variant without a key.
+
+## Step 2 — Publish the privacy policy at a URL
+
+Play requires the policy at a **public web address**, not only inside the app. The file already
+exists; it just has to be reachable.
+
+The repository is `git@github.com:yaroslavputria/remote-ear.git` and **nothing has been pushed yet**
+— 34 commits are sitting locally. Once you push (say the word and I will), this URL works and renders
+as a readable page:
+
+```
+https://github.com/yaroslavputria/remote-ear/blob/main/app/src/main/assets/legal/privacy-policy.md
+```
+
+If you would rather not make the repository public, the alternative is any static host — a GitHub
+Gist, a Netlify drop, a page on a domain you own. What matters is that the URL is public, stable, and
+shows the same text the app shows.
+
+**Before you publish it, one thing needs a decision:** the terms have no governing-law clause.
+See [mvp-scope M16](mvp-scope.md#m16--the-two-documents).
+
+## Step 3 — Create the app in Play Console
+
+At <https://play.google.com/console> → **Create app**.
+
+| Field | Answer |
+|---|---|
+| App name | `RemoteEar` |
+| Default language | English (United States) or (United Kingdom) — the copy below is British English |
+| App or game | App |
+| Free or paid | **Free** |
+| Declarations | Confirm it meets the Developer Program Policies and US export laws |
+
+## Step 4 — Store listing
+
+**App name** (30 characters max):
+
+```
+RemoteEar
+```
+
+**Short description** (80 characters max — this one is 79):
+
+```
+Hear one room through your headphones. No recording, no internet, no accounts.
+```
+
+**Full description** (4000 characters max):
+
+```
+RemoteEar turns your phone into a microphone you can listen to from another room.
+
+Leave the phone where you want to hear — a child's bedroom, a workshop, a room where
+someone is resting — put a Bluetooth earbud in your ear, and tap Listen. You hear that
+room, live, wherever you are in the house.
+
+That is all it does.
+
+NOTHING LEAVES YOUR PHONE
+
+RemoteEar does not request internet permission. Not "does not upload" — cannot. Android
+will not let an app without that permission open a network connection at all, and you can
+check it yourself in the app's permission list. There are no accounts, no analytics, no
+crash reporting, no advertising and no third-party libraries beyond Google's own.
+
+Audio is never written to a file. It exists for a fraction of a second in memory on its way
+to your headphones, and then it is gone.
+
+IT TELLS YOU WHEN IT STOPS
+
+A monitor that goes quiet without saying so is worse than no monitor. So when something
+interrupts it, RemoteEar says which thing, on screen and in the notification:
+
+• your headphones disconnect — and it resumes on its own when they come back
+• a phone call starts — and it resumes when the call ends
+• another app takes the audio or the microphone
+
+Every one of those messages starts with what matters: you are not hearing the room.
+
+BUILT FOR A DARK ROOM
+
+Dark by default, with one large button, and text large enough to read at a glance at 3am.
+The screen dims itself while listening so it emits almost no light, and any touch brings it
+back. Volume is your phone's own volume — no second control to forget about. One
+optional noise-reduction slider, off by default, with an honest warning that turning it up
+can hide quiet sounds.
+
+WHAT IT IS NOT
+
+RemoteEar is not a baby monitor, a medical device, a security system or a safety device,
+and it must not be relied on as one. It does not detect crying, it does not alert you, and
+it cannot promise to keep running: Bluetooth range, batteries, phone calls and your phone
+manufacturer's battery management can all stop it. Never use it as the only way you are
+keeping track of a child or anyone who depends on being heard. Stay in reach and check in
+person.
+
+It needs a Bluetooth headphone or earbud. It plays only to headphones, never to the
+phone's speaker.
+
+Open source under the MIT licence.
+```
+
+**App icon**: [store/icon-512.png](../store/icon-512.png)
+**Feature graphic**: [store/feature-1024x500.png](../store/feature-1024x500.png)
+**Phone screenshots**: the three in [store/screenshots/](../store/screenshots/) — listening, paused
+with a stated reason, and the control disabled with an explanation. That order tells the story the
+listing claims.
+
+> **Two caveats on the screenshots.** They are real captures from a real phone, which means the
+> status bar carries **your** notification icons — Instagram, Gmail and so on. Harmless, but it does
+> tell the world which apps you have. And there is no screenshot of the ready-to-listen state with
+> headphones connected, because the earbuds were disconnected when they were taken.
+>
+> To retake them cleanly, put the phone in demo mode first so the status bar is generic:
+>
+> ```bash
+> adb shell settings put global sysui_demo_allowed 1
+> adb shell am broadcast -a com.android.systemui.demo -e command enter
+> adb shell am broadcast -a com.android.systemui.demo -e command clock -e hhmm 0930
+> adb shell am broadcast -a com.android.systemui.demo -e command notifications -e visible false
+> adb shell am broadcast -a com.android.systemui.demo -e command battery -e level 100 -e plugged false
+> # take the screenshots, then:
+> adb shell am broadcast -a com.android.systemui.demo -e command exit
+> ```
+>
+> Play validates image dimensions on upload and tells you immediately if it objects, so treat the
+> Console as the authority on sizes rather than any number written here.
+
+## Step 5 — App content declarations
+
+This is the section that actually gates release. Console → **Policy → App content**.
+
+### Privacy policy
+The URL from step 2.
+
+### Data safety
+The honest answers, which are unusually simple here — see [privacy.md](privacy.md):
+
+| Question | Answer |
+|---|---|
+| Does your app collect or share any of the required user data types? | **No** |
+| Does your app collect or share audio? | **No.** Audio is processed ephemerally in memory and never transmitted or stored. Play's definition of "collection" is transmission off the device; nothing leaves |
+| Is all user data encrypted in transit? | Not applicable — no data is transmitted |
+| Do you provide a way for users to request data deletion? | Not applicable — nothing is retained |
+
+If a question insists on a data type, the truthful answer everywhere is "not collected". The absence
+of `INTERNET` in the manifest is your evidence if anyone asks.
+
+### Foreground service permissions
+
+**This one blocks review if skipped**, and it is easy to miss. Play asks every app that declares a
+foreground-service type to justify it, and may ask for a short screen recording.
+
+- Permission: `FOREGROUND_SERVICE_MICROPHONE`
+- Purpose to select: **the app records audio while in the background at the user's request** (the
+  option wording varies; pick the one about continuing to use the microphone with the app not in the
+  foreground).
+
+Justification text:
+
+```
+RemoteEar plays the phone's built-in microphone live to the user's Bluetooth headphones so
+they can hear one room while they are in another. The whole purpose of the app requires the
+microphone to keep working after the user leaves the phone behind and the screen turns off,
+which is only possible with a microphone-type foreground service.
+
+The service is started only by an explicit tap on the Listen button in a visible screen, and
+it shows an ongoing notification for its entire lifetime, stating whether audio is currently
+flowing and offering a Stop action. Audio is never recorded, stored or transmitted: the app
+does not request the INTERNET permission, so it cannot send anything anywhere.
+```
+
+If a demo video is requested, screen-record 30 seconds: open the app, tap Listen, show the
+notification saying "Listening", lock the screen, unlock, tap Stop.
+
+### Content rating
+Fill in the questionnaire honestly. Everything is "no": no violence, no sexual content, no profanity,
+no gambling, no user-generated content, no sharing of location or personal information. It should
+come back as suitable for everyone.
+
+### Target audience
+**Not designed for children.** The *user* of this app is an adult — a parent, or someone looking
+after another adult. Declaring a child audience would pull the app into Play's Families programme
+with a much larger compliance surface, for no benefit: children are not the users, even though a
+child may be in the room.
+
+### Other declarations
+- Ads: **no**.
+- In-app purchases: **no**.
+- Government app: no. News app: no. COVID-19 app: no.
+- Health: **no** — and be careful here. RemoteEar makes no health or safety claim, and the terms say
+  so explicitly. Do not describe it as a medical or safety device anywhere in the listing.
+
+## Step 6 — Upload and release
+
+1. **Play App Signing**: accept it (it is the default). Google holds the app signing key; your
+   `.jks` becomes the *upload* key. This is what lets a lost key be replaced without losing the app.
+2. **Internal testing** first: Release → Testing → Internal testing → Create new release → upload
+   `app-release.aab`. Add your own email as a tester. Install from the opt-in link on a real phone
+   and check the **release** build behaves like the debug one — R8 is on now, and this build has
+   never been run on a device.
+3. Release notes for the first version:
+   ```
+   First release.
+   ```
+4. When you are happy: Production → Create new release → same bundle → roll out. First-time
+   personal-account submissions are commonly reviewed over a few days, and Google may also require a
+   period of closed testing with a minimum number of testers before production access — the Console
+   will tell you which rules apply to your account.
+
+## Step 7 — For every later version
+
+Bump both values in `app/build.gradle.kts`:
+
+```kotlin
+versionCode = 2          // must increase for every upload; Play rejects a repeat
+versionName = "0.1.1"    // what the user sees, and what About shows
+```
+
+Then `./gradlew :app:bundleRelease` and upload. `versionCode` is the one Play enforces.
+
+---
+
+## Before you press submit
+
+Honest state of the thing you are about to publish, so the decision is an informed one:
+
+- **The release build has never been run on a device.** It builds, it is minified by R8, and its
+  merged manifest has been checked — but every hardware test in `docs/test-runs/` used a debug
+  build. Internal testing in step 6 exists for exactly this.
+- **[R1](risks.md) is unresolved**: nobody knows whether ColorOS — or Xiaomi, or Samsung — lets this
+  app run all night. The app now tells the user honestly when a session ended on its own, and that
+  mitigation itself has not been verified on a device.
+- **One phone, one pair of earbuds.** No LE Audio hardware, no near-AOSP baseline, and nothing tested
+  on Android 15 or 16.
+- **No numeric latency figure**, and no measured battery drain.
+
+None of that is a reason not to publish something free and open-source. It is a reason to go through
+internal testing rather than straight to production, and to keep the listing's promises as narrow as
+they are written above.

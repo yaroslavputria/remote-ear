@@ -19,6 +19,7 @@ foreground service; the code lives in [`app/`](../app/).
 | 8 | [privacy.md](privacy.md) | The invariants, and how they are structurally enforced |
 | — | [adr/](adr/) | Architecture Decision Records — the decisions themselves |
 | — | [dev-setup.md](dev-setup.md) | Toolchain install (no admin rights), and the traps found doing it |
+| — | [release-guide.md](release-guide.md) | Getting it into Play: signing, the listing copy, every declaration, and what is still unproven |
 | — | [design-brief.md](design-brief.md) | Input for UI design work — states, microcopy, constraints |
 | — | [design-spec.md](design-spec.md) | What the design returned: tokens, verbatim copy, layout, icon. The reference the UI code matches |
 | — | [design/screens.html](design/screens.html) | The designed screens, flattened out of the delivered bundle so they open in any browser |

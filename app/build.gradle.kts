@@ -1,7 +1,24 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.compose.compiler)
 }
+
+/**
+ * Release signing, read from `keystore.properties` at the repo root or from environment variables.
+ *
+ * Both are gitignored and neither is required: a fresh clone and CI build an *unsigned* release,
+ * which is what lets the pipeline verify the release variant's merged manifest without anyone
+ * handing it a key. See docs/play-listing.md.
+ */
+val keystoreProperties = Properties().apply {
+    val file = rootProject.file("keystore.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
+}
+
+fun signingValue(key: String, env: String): String? =
+    keystoreProperties.getProperty(key) ?: System.getenv(env)
 
 android {
     namespace = "com.yputria.remoteear"
@@ -12,13 +29,32 @@ android {
         minSdk = 29
         targetSdk = 36
         versionCode = 1
-        versionName = "0.1-proto"
+        versionName = "0.1.0"
+    }
+
+    signingConfigs {
+        create("release") {
+            signingValue("storeFile", "REMOTEEAR_STORE_FILE")?.let {
+                storeFile = file(it)
+                storePassword = signingValue("storePassword", "REMOTEEAR_STORE_PASSWORD")
+                keyAlias = signingValue("keyAlias", "REMOTEEAR_KEY_ALIAS")
+                keyPassword = signingValue("keyPassword", "REMOTEEAR_KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // R8 on. For a microphone app the size reduction is beside the point; what matters is
+            // that the shipped binary contains only what is reachable, so "no network code" is a
+            // property of the artifact and not just of the source.
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+
+            // Null when no key is configured, which produces an unsigned release rather than a
+            // build failure - see the note above.
+            signingConfig = signingConfigs.getByName("release").takeIf { it.storeFile != null }
         }
     }
 
