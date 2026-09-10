@@ -23,7 +23,7 @@ import com.yputria.remoteear.theme.RemoteEarTheme
 private fun state(
     screen: Screen,
     micStatus: MicStatus = MicStatus.Allowed,
-    headphones: HeadphoneStatus = HeadphoneStatus.Connected("BLUETOOTH_A2DP"),
+    headphones: HeadphoneStatus = HeadphoneStatus.Connected("Buds Pro"),
     volume: Float = 0.57f,
     noise: Float = 0f,
     endedUnexpectedly: Boolean = false,
