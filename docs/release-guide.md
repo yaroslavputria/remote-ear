@@ -279,22 +279,76 @@ child may be in the room.
 - Health: **no** — and be careful here. RemoteEar makes no health or safety claim, and the terms say
   so explicitly. Do not describe it as a medical or safety device anywhere in the listing.
 
-## Step 7 — Upload and release
+## Step 7 — The four stages on the Console dashboard
 
-1. **Play App Signing**: accept it (it is the default). Google holds the app signing key; your
-   `.jks` becomes the *upload* key. This is what lets a lost key be replaced without losing the app.
-2. **Internal testing** first: Release → Testing → Internal testing → Create new release → upload
-   `app-release.aab`. Add your own email as a tester. Install from the opt-in link on a real phone
-   and check the **release** build behaves like the debug one — R8 is on now, and this build has
-   never been run on a device.
-3. Release notes for the first version:
+The dashboard shows Internal testing, Finish setting up your app, Closed testing and Production as a
+list. They are **not** four things to do in that order — there is a dependency, and getting it wrong
+costs a fortnight:
+
+```
+Internal testing  ──────────────────────────────►  available now, needs nothing
+                                                   (this is where the release build gets its
+                                                    first run on a device)
+
+Finish setting up  ──►  Closed testing  ──►  14 days  ──►  Apply for production
+   (declarations         (needs setup      (12 testers
+    + listing)            finished)         opted in, continuously)
+```
+
+**The 14-day clock is the only thing here that cannot be hurried**, and it cannot start until the
+setup is finished. So the order that wastes no time is: internal testing *now* (it blocks nothing),
+setup *immediately* after, closed test the moment setup allows, and then two weeks of waiting during
+which you can do anything you like — including building the next app.
+
+### 7a. Internal testing — do this first, today
+
+No setup required, builds available within minutes, up to 100 testers.
+
+1. **Play App Signing**: accept when prompted (the default). Google holds the app signing key and
+   your `.jks` becomes the *upload* key — which is what lets a lost key be replaced without losing
+   the app.
+2. Release → Testing → **Internal testing** → Create new release → upload `app-release.aab`.
+3. Release notes:
    ```
-   First release.
+   First internal build.
    ```
-4. When you are happy: Production → Create new release → same bundle → roll out. First-time
-   personal-account submissions are commonly reviewed over a few days, and Google may also require a
-   period of closed testing with a minimum number of testers before production access — the Console
-   will tell you which rules apply to your account.
+4. Testers tab → add your own Google account → copy the opt-in link → open it on the phone → install.
+5. **Then actually use it for ten minutes.** This is the first time the release build has ever run:
+   R8 has rewritten the bytecode and resource shrinking has removed anything it thought unused.
+   Check listening starts, the notification appears, the interruption messages still read correctly,
+   and the Privacy policy and Terms screens still open — those read from `assets/`, which is exactly
+   the kind of thing a shrinker can get wrong.
+
+### 7b. Finish setting up your app
+
+The **App content** declarations and the store listing — steps 5 and 6 above. Every answer is
+written out there. This is form-filling, perhaps an hour, and it is what unlocks closed testing.
+
+### 7c. Closed testing — start the clock
+
+1. Release → Testing → **Closed testing** → create a track (the default "Alpha" is fine).
+2. Upload the same `.aab`.
+3. Testers: create a **Google Group** and use its address, rather than pasting twelve individual
+   emails. You will publish a second app from this account, and a group can be reused; a pasted list
+   cannot.
+4. Send the opt-in link to twelve people. **They must each open it, accept, and install** — Play
+   counts *opted-in testers*, not invitations sent. The Console shows the live count.
+5. Leave it alone for fourteen days. **Do not remove testers**; the requirement is twelve opted in
+   *continuously* for the preceding fourteen days.
+
+> Twelve people is the real work in this whole document. Start collecting them before you need them.
+> Ask for phones that are *not* OnePlus: the one thing this project most needs to learn is whether
+> other manufacturers' battery managers kill the service overnight ([R1](risks.md)), and twelve
+> identical phones would teach it nothing.
+
+### 7d. Production
+
+After fourteen days with twelve testers still opted in, the Dashboard offers **Apply for production
+access**. The application asks about the closed test — what you learned, what you changed. Answer it
+from the test-run records in `docs/test-runs/` and from whatever the twelve testers reported; that is
+what those files are for.
+
+Then Production → Create new release → same bundle → roll out.
 
 ## Step 8 — For every later version
 
