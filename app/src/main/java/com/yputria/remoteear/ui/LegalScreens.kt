@@ -265,7 +265,7 @@ private fun readAsset(context: Context, path: String): String =
     runCatching { context.assets.open(path).bufferedReader().use { it.readText() } }
         .getOrElse { "" }
 
-private sealed interface Block {
+internal sealed interface Block {
     data class Title(val text: String) : Block
     data class Heading(val text: String) : Block
     data class Paragraph(val text: String) : Block
@@ -278,15 +278,18 @@ private sealed interface Block {
  * docs/privacy.md argues against on the grounds that every dependency is a claim the user cannot
  * audit - and it would be a strange thing to add in order to display the privacy policy.
  */
-private fun parseMarkdown(source: String): List<Block> {
+internal fun parseMarkdown(source: String): List<Block> {
     val blocks = mutableListOf<Block>()
-    val paragraph = StringBuilder()
+    val buffer = StringBuilder()
+    var inBullet = false
 
     fun flush() {
-        if (paragraph.isNotEmpty()) {
-            blocks += Block.Paragraph(paragraph.toString().trim())
-            paragraph.clear()
+        if (buffer.isNotEmpty()) {
+            val text = buffer.toString().trim()
+            blocks += if (inBullet) Block.Bullet(text) else Block.Paragraph(text)
+            buffer.clear()
         }
+        inBullet = false
     }
 
     source.lines().forEach { raw ->
@@ -303,13 +306,19 @@ private fun parseMarkdown(source: String): List<Block> {
             }
             line.startsWith("- ") -> {
                 flush()
-                blocks += Block.Bullet(line.removePrefix("- "))
+                inBullet = true
+                buffer.append(line.removePrefix("- "))
             }
-            // A continuation line: the documents are hard-wrapped at 100 columns, so consecutive
-            // non-empty lines are one paragraph and must be re-joined rather than broken.
+            // A continuation line. The documents are hard-wrapped at 100 columns, so consecutive
+            // non-empty lines belong to whatever block is open - and **that includes a bullet**.
+            //
+            // It did not, until a release build put the privacy policy on screen with a bullet
+            // ending mid-sentence and its second half sitting underneath as an unindented
+            // paragraph. Of all the screens to look broken on, that one makes a claim about
+            // trustworthiness.
             else -> {
-                if (paragraph.isNotEmpty()) paragraph.append(' ')
-                paragraph.append(line)
+                if (buffer.isNotEmpty()) buffer.append(' ')
+                buffer.append(line)
             }
         }
     }
