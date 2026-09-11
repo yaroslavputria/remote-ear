@@ -386,6 +386,43 @@ written out there. This is form-filling, perhaps an hour, and it is what unlocks
 > other manufacturers' battery managers kill the service overnight ([R1](risks.md)), and twelve
 > identical phones would teach it nothing.
 
+### Release notes for the closed test
+
+```
+First closed test.
+
+RemoteEar plays this phone's microphone to your Bluetooth headphones, so you can hear
+one room while you are in another. Leave the phone in a room, put an earbud in, walk out.
+
+Worth trying, because these are the parts most likely to be wrong:
+- take a phone call while it is listening
+- disconnect your headphones, then reconnect them
+- leave it listening overnight, then look at the screen in the morning before touching it
+
+It should pause and say why, then continue by itself. If it ever goes quiet without
+saying so, that is a bug and the most useful thing you can report.
+```
+
+### What to send the testers
+
+They need the opt-in link from the Testers tab, and they must use the Google account their phone's
+Play Store is signed in to. Worth saying explicitly, because the one report this project most needs
+is the one people are least likely to think of volunteering:
+
+```
+This is a personal app I'd like tested on phones that aren't mine. It plays your phone's
+microphone to your Bluetooth headphones so you can hear one room from another - like
+listening to a sleeping child from downstairs.
+
+It records nothing and has no internet permission, so nothing can leave your phone.
+
+The one thing I really need to know: if you leave it listening for a long stretch and it
+stops on its own, tell me - which phone, and roughly when. Some manufacturers shut apps
+down to save battery and I have no way to test that on my own phone.
+
+Opt in here: <link>
+```
+
 ### 7d. Production
 
 After fourteen days with twelve testers still opted in, the Dashboard offers **Apply for production
