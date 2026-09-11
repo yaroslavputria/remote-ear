@@ -123,7 +123,7 @@ shows that the earlier reconstruction could not:
 |---|---|
 | **F — another app takes the microphone** | Reported working by the user, but **not captured**: `dumpsys audio` records focus and mode, not capture clients, so there is no evidence trail for it here. The one thing that would prove it is a log line from our own recording callback, which had rotated out |
 | **The call wording after the fix** | The fix landed after the test. Needs one more call |
-| Dim state, light theme, both `Stopped` kinds | Still only verified as previews |
+| Light theme, both `Stopped` kinds | Still only verified as previews |
 | Multi-hour endurance, drift, battery, OEM kill | Phase 6 / Scenario G |
 
 ## What is left for a person

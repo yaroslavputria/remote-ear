@@ -59,3 +59,44 @@ designed. Two defects were found by using it, both fixed in this session — see
   visible divergence, left as-is pending a decision.
 - Reinstalling the APK kills the service and so ends a listening session. Worth remembering before
   reinstalling during a test someone is relying on.
+
+## Addendum — 2026-09-11, on the **release** build
+
+The R8-minified, resource-shrunk, signed build was installed on the same device and driven through
+the UI. This was its first run anywhere.
+
+| Check | Result |
+|---|---|
+| Permission screen renders (struck-through badge, rationale, Allow button) | **pass** |
+| Grant flow works, screen becomes Idle | **pass** |
+| Headphone name — `JBL WAVE FLEX` | **pass** |
+| Overflow menu opens: Privacy policy · Terms of use · About | **pass** |
+| Privacy policy renders from `assets/` | **pass** — this was the specific resource-shrinking risk |
+| Noise slider responds, reads Off/Medium correctly | **pass** |
+| Listening state, notification, Stop | **pass** |
+| **Dimmed listening state ([S8](../mvp-scope.md))** | **pass** — see below |
+
+### The dim state, finally seen
+
+Left untouched for 25 s while listening: black surface, ring and "Listening" at reduced contrast,
+*"Tap anywhere to brighten the screen."*, **Stop still present and readable**, and everything below
+it — status panel, volume, noise, footnote — gone. Exactly the design.
+
+It was found by accident, and the accident is the better evidence: scripted `adb` taps arriving
+minutes apart kept "failing" to press Stop. They were not failing. **The first touch after dimming
+is deliberately absorbed** so a blind tap in the dark cannot stop a monitor, and every one of those
+taps was being spent waking the screen. The feature was working on hardware before anyone had
+looked at it.
+
+### Defect found and fixed
+
+The privacy policy rendered its first bullet ending mid-sentence, with the remainder below as an
+unindented paragraph. Both legal documents hard-wrap at 100 columns, so most of their bullets span
+two source lines and nearly all were affected. Fixed, with six parser tests. Of all the screens to
+look careless on, a document claiming the app collects nothing is the worst.
+
+### Not tested
+
+`adb shell screenrecord` **segfaults on this device** (exit 139, no file written), so the
+foreground-service demo video for Play could not be captured over `adb`. Needs the phone's own
+screen recorder.

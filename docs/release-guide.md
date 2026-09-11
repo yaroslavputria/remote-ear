@@ -283,8 +283,28 @@ flowing and offering a Stop action. Audio is never recorded, stored or transmitt
 does not request the INTERNET permission, so it cannot send anything anywhere.
 ```
 
-If a demo video is requested, screen-record 30 seconds: open the app, tap Listen, show the
-notification saying "Listening", lock the screen, unlock, tap Stop.
+### If a demo video is requested
+
+Roughly 40 seconds, showing the claims above in the order a reviewer will check them:
+
+1. Open RemoteEar from the launcher
+2. On **Not listening**, tap **Listen** — this is *"only by an explicit tap in a visible screen"*
+3. Hold on **Listening** for two or three seconds
+4. Pull down the notification shade: the ongoing notification, with its **Stop listening** action.
+   **This is the most important shot** — it is the "noticeable to the user" requirement
+5. Press Home, pull the shade again: still there, still listening, app in the background
+6. Reopen, tap **Stop listening**
+
+The earbuds must be connected or the Listen button is correctly disabled and there is nothing to
+film. Prefer Home over locking the screen — a black section reads as a failure.
+
+> **`adb shell screenrecord` segfaults on this device** *(CPH2399, ColorOS, exit 139, no file
+> written — confirmed 2026-09-11)*. Use the phone's own screen recorder from Quick Settings, with
+> its microphone capture off. One person can record while another drives the taps over `adb`, which
+> gives steadier timing than doing both at once.
+
+Upload to YouTube as **Unlisted** — *not Private*, which reviewers cannot open. A Drive link set to
+"anyone with the link" also works.
 
 ### Content rating
 Fill in the questionnaire honestly. Everything is "no": no violence, no sexual content, no profanity,
