@@ -65,7 +65,32 @@ Verify the build picks it up:
 
 The output is `app/build/outputs/bundle/release/app-release.aab`. **Play wants the `.aab`, not an
 APK.** Without `keystore.properties` this same command still succeeds and produces an *unsigned*
-bundle — deliberate, so CI can build and check the release variant without a key.
+bundle — deliberate, so CI can build and check the release variant without a key. An unsigned bundle
+looks identical in the file listing and **Play rejects it on upload**, so check rather than assume:
+
+```bash
+/c/jdk17/bin/jarsigner -verify app/build/outputs/bundle/release/app-release.aab   # "jar verified."
+/c/jdk17/bin/keytool -printcert -jarfile app/build/outputs/bundle/release/app-release.aab
+```
+
+### The upload key, for the record
+
+*Created 2026-09-11. Not a secret — a certificate fingerprint is public by design, and having it
+written down is how you confirm later that a build was signed with the key you think it was.*
+
+```
+Owner/Issuer:  CN=Yaroslav Putria, O=RemoteEar, C=UA
+Algorithm:     SHA384withRSA, 4096-bit
+Valid:         2026-09-11 → 2054-01-27
+SHA-256:       90:57:79:E3:C4:E7:4B:B5:2A:B9:AE:D7:BD:A3:BD:07:
+               4C:D1:67:02:3C:60:05:4E:54:34:F5:34:7D:6F:95:51
+```
+
+`jarsigner -verify` also prints warnings about entries "signed in JarFile but not in
+JarInputStream", and about a self-signed chain with no timestamp. **Both are expected and neither
+matters here**: an upload key is meant to be self-signed, and the streaming-order complaint is an
+artefact of how a bundle is laid out, not a defect in the signature. `jar verified.` is the line that
+counts.
 
 ## Step 2 — Publish the privacy policy at a URL
 
