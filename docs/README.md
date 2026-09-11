@@ -93,8 +93,15 @@ continuous, 47.7 M frames in and exactly as many out, no underruns, no drift cor
 call handled correctly. Battery drain, run duration and OEM survival were not measured, so
 [H5 and H6](feasibility.md) stay open and [R1](risks.md) has no evidence either way.
 
-**Next: Phase 7** — release readiness: a signed minified build, the merged-manifest permission
-check, and the Play paperwork ([R3](risks.md)).
+**Phase 7 is done and version 2 / `0.1.1` is submitted for review** on Google Play's closed testing
+track — signed bundle, store listing, every App content declaration, and the foreground-service
+justification with its demo video ([release-guide.md](release-guide.md)).
+
+**Next: twelve testers, fourteen days.** Nothing is published until then, and that test is not a
+formality: one phone and one pair of earbuds have carried every hardware claim here, while
+[R1](risks.md) - an OEM battery manager killing the service overnight - is the top-ranked risk and
+is untestable on that phone. Twelve varied devices is the first real instrument this project has
+had.
 
 Still open on hardware: a numeric latency figure (no clap test yet), LE Audio (H2 — no hardware), an
 OEM baseline (no near-AOSP device), and all Android 15/16 behaviour (untestable on API 34). The

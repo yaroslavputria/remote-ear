@@ -266,6 +266,23 @@ the product does not work on that OEM, and saying so is better than shipping a m
 
 **Gate:** releasable.
 
+**Gate status: met, 2026-09-11.** Version **2 / `0.1.1`** is signed, uploaded, and **submitted for
+review on the closed testing track**, with the store listing, all App content declarations, the
+foreground-service justification and its demo video complete. Version code 1 was spent on a build
+whose privacy-policy bullets rendered wrongly — found by installing the release build rather than
+trusting it, which is the entire argument for doing that before uploading.
+
+What that gate does *not* say:
+
+- **Nothing is published.** Production access needs twelve testers opted in continuously for
+  fourteen days, and the clock starts when they opt in, not when the bundle was uploaded.
+- **The closed test is not a formality here.** One phone and one pair of earbuds have carried every
+  hardware claim in this repository, and [R1](risks.md) — an OEM battery manager killing the service
+  overnight — is both the top-ranked risk and untestable on that one phone. Twelve varied devices
+  for two weeks is the first real instrument this project has had.
+- Whatever those testers report belongs in `docs/test-runs/`, and the production-access application
+  asks what the closed test taught you. That is what the answer should be drawn from.
+
 ---
 
 ## Post-MVP: the sleep-sound spike
