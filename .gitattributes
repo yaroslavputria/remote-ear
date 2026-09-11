@@ -1,0 +1,5 @@
+# The Gradle wrapper is executed by /bin/sh on Linux CI. CRLF there fails as
+# "bad interpreter: /bin/sh^M" - which looks nothing like a line-endings bug.
+* text=auto eol=lf
+*.bat text eol=crlf
+*.jar binary
