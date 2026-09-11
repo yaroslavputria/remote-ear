@@ -434,14 +434,18 @@ Then Production → Create new release → same bundle → roll out.
 
 ## Step 8 — For every later version
 
-Bump both values in `app/build.gradle.kts`:
+Bump both values in `app/build.gradle.kts`, then `./gradlew :app:bundleRelease` and upload:
 
 ```kotlin
-versionCode = 2          // must increase for every upload; Play rejects a repeat
-versionName = "0.1.1"    // what the user sees, and what About shows
+versionCode = 3          // must increase for every upload
+versionName = "0.1.2"    // what the user sees, and what the About screen shows
 ```
 
-Then `./gradlew :app:bundleRelease` and upload. `versionCode` is the one Play enforces.
+**A version code is retired permanently the moment a bundle carrying it is uploaded** - even to a
+release you then discard, even to internal testing only. Code 1 was spent on the build with the
+broken privacy-policy bullets, so the first bundle that reached a tester was code 2. Expect to burn
+a code on any upload that turns out to be wrong; that is normal and costs nothing except the
+number.
 
 ---
 

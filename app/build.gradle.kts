@@ -28,8 +28,11 @@ android {
         applicationId = "com.yputria.remoteear"
         minSdk = 29
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        // Play retires a version code permanently the moment a bundle carrying it is uploaded -
+        // even to a discarded release, even to internal testing. Code 1 went up with the broken
+        // privacy-policy bullets; this is the fixed artifact and needs its own pair.
+        versionCode = 2
+        versionName = "0.1.1"
     }
 
     signingConfigs {
