@@ -45,7 +45,7 @@ It will ask for a keystore password and then whether to reuse it for the key —
 both is fine.
 
 **Keep the `.jks` file and its passwords somewhere you will still have them in five years** — a
-password manager, not just this laptop. Even with Play App Signing (step 5) enabled, losing the
+password manager, not just this laptop. Even with Play App Signing (step 7) enabled, losing the
 upload key means a support round-trip to replace it.
 
 Then create `keystore.properties` at the repo root — **gitignored, never committed**:
@@ -69,25 +69,45 @@ bundle — deliberate, so CI can build and check the release variant without a k
 
 ## Step 2 — Publish the privacy policy at a URL
 
-Play requires the policy at a **public web address**, not only inside the app. The file already
-exists; it just has to be reachable.
-
-The repository is `git@github.com:yaroslavputria/remote-ear.git` and **nothing has been pushed yet**
-— 34 commits are sitting locally. Once you push (say the word and I will), this URL works and renders
-as a readable page:
+Play requires the policy at a **public web address**, not only inside the app. **Done** — the
+repository is public and pushed, so paste this into the Console:
 
 ```
 https://github.com/yaroslavputria/remote-ear/blob/main/app/src/main/assets/legal/privacy-policy.md
 ```
 
-If you would rather not make the repository public, the alternative is any static host — a GitHub
-Gist, a Netlify drop, a page on a domain you own. What matters is that the URL is public, stable, and
-shows the same text the app shows.
+*Verified live 2026-09-10.* It is the same file the app renders on its Privacy policy screen, which
+is the point: a reader can compare the two and find them identical, rather than taking the app's word
+for it.
 
 Both documents are final: the contact address is the author's, and the terms are governed by the law
 of Ukraine.
 
-## Step 3 — Create the app in Play Console
+## Step 3 — Account type: personal, not organization
+
+The Console asks this once and it is awkward to change, so it is worth thirty seconds of thought.
+
+| | Personal | Organization |
+|---|---|---|
+| Verification | Your ID and address | The **legal entity**, which needs a **D-U-N-S number** — free from Dun & Bradstreet, but issuing can take days to weeks |
+| Suits | An individual publishing their own work | A registered company publishing as itself |
+| Catch | **12 testers, opted in continuously for 14 days**, before you can apply for production access — *[verified 2026-09-10](https://support.google.com/googleplay/android-developer/answer/14151465)*, applies to personal accounts created after 13 Nov 2023 | Not stated on that page; do not assume it is exempt |
+
+**Choose personal.** RemoteEar is an individual's MIT-licensed side project, the `LICENSE` and every
+commit are in your own name, and there is no company to attribute it to. Registering as an
+organization would mean obtaining a D-U-N-S number and verifying an entity in order to publish a free
+app that one person wrote.
+
+The 12-tester rule is the real cost of that choice, and it is not a bad thing here: this app has been
+tested on **one phone with one pair of earbuds**, and its top-ranked risk is that some manufacturers
+kill it overnight ([R1](risks.md)). Twelve people on twelve different phones for two weeks is exactly
+the evidence this project is missing. Friends and family opting in via the closed-testing link
+counts.
+
+> If you *do* have a registered business and would rather ship under it, that is a legitimate reason
+> to pick organization — just start the D-U-N-S request first, because it is the long pole.
+
+## Step 4 — Create the app in Play Console
 
 At <https://play.google.com/console> → **Create app**.
 
@@ -99,7 +119,7 @@ At <https://play.google.com/console> → **Create app**.
 | Free or paid | **Free** |
 | Declarations | Confirm it meets the Developer Program Policies and US export laws |
 
-## Step 4 — Store listing
+## Step 5 — Store listing
 
 **App name** (30 characters max):
 
@@ -194,7 +214,7 @@ listing claims.
 > Play validates image dimensions on upload and tells you immediately if it objects, so treat the
 > Console as the authority on sizes rather than any number written here.
 
-## Step 5 — App content declarations
+## Step 6 — App content declarations
 
 This is the section that actually gates release. Console → **Policy → App content**.
 
@@ -259,7 +279,7 @@ child may be in the room.
 - Health: **no** — and be careful here. RemoteEar makes no health or safety claim, and the terms say
   so explicitly. Do not describe it as a medical or safety device anywhere in the listing.
 
-## Step 6 — Upload and release
+## Step 7 — Upload and release
 
 1. **Play App Signing**: accept it (it is the default). Google holds the app signing key; your
    `.jks` becomes the *upload* key. This is what lets a lost key be replaced without losing the app.
@@ -276,7 +296,7 @@ child may be in the room.
    period of closed testing with a minimum number of testers before production access — the Console
    will tell you which rules apply to your account.
 
-## Step 7 — For every later version
+## Step 8 — For every later version
 
 Bump both values in `app/build.gradle.kts`:
 
